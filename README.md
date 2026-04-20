@@ -1,3 +1,16 @@
+Ficou bom já — mas dá pra deixar com cara de projeto **profissional nível portfólio forte**, daqueles que chamam atenção de recrutador 👀
+
+Vou te entregar uma versão refinada, com:
+
+* melhor organização visual
+* linguagem mais fluida
+* pequenos ajustes técnicos
+* toque mais “vendável” (sem exagero)
+
+Pode copiar direto 👇
+
+---
+
 ```markdown
 <h1 align="center">
   📚 Portal do Colportor
@@ -8,102 +21,164 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white" alt="Flutter" />
-  <img src="https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black" alt="Firebase" />
-  <img src="https://img.shields.io/badge/Riverpod-141114?style=for-the-badge&logo=dart&logoColor=white" alt="Riverpod" />
+  <img src="https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white" />
+  <img src="https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black" />
+  <img src="https://img.shields.io/badge/Riverpod-141114?style=for-the-badge&logo=dart&logoColor=white" />
 </p>
 
-<br>
+---
 
-> 🌐 **Ambiente de Testes (Live Demo):** > Acesse o sistema em produção: **[https://colportor-portal.firebaseapp.com/](https://colportor-portal.firebaseapp.com/)**
+## 🌐 Demo Online
+
+🚀 Acesse o sistema em produção:  
+👉 https://colportor-portal.firebaseapp.com/
 
 ---
 
 ## 📖 Sobre o Projeto
 
-O **Portal do Colportor** é uma aplicação Flutter Web projetada para conectar administradores e colportores (estudantes e efetivos). O sistema foca em segurança, gestão em tempo real e motivação diária, fornecendo um painel interativo com estatísticas, rankings e recursos operacionais.
+O **Portal do Colportor** é uma aplicação **Flutter Web** desenvolvida para facilitar a gestão e o acompanhamento de colportores (estudantes e efetivos).
 
-## ✨ Principais Funcionalidades
+O sistema conecta administradores e usuários em um ambiente seguro e dinâmico, com foco em:
 
-* **🔐 Autenticação Segura & RBAC:** Login integrado ao Firebase Auth com controle de acesso baseado em funções (Administradores vs. Colportores).
-* **✉️ Recuperação de Senha Nativa:** Interceptação de `Action URLs` do Firebase (sem hashtag `#`) para redefinição de senha com interface 100% personalizada e dentro do app.
-* **🔑 Sistema de Convites:** Tela oculta de painel Admin para geração de códigos de acesso únicos e dinâmicos armazenados no Firestore.
-* **🔄 Sincronização em Tempo Real:** Uso de Streams (via Riverpod) para refletir instantaneamente na UI qualquer alteração de dados do perfil do usuário.
-* **📸 Gestão de Perfil via ImgBB:** Upload de fotos de perfil otimizado utilizando a API do ImgBB, poupando custos de storage e entregando alta performance.
-* **📖 Dashboard Motivacional Dinâmico:** Consumo assíncrono da *A Bíblia Digital API* para exibir um versículo (NVI) novo a cada acesso, com *fallback* offline garantido.
+- 📊 Monitoramento em tempo real  
+- 🧑‍💼 Gestão de usuários  
+- 🔥 Engajamento diário  
+- 📈 Performance e rankings  
 
 ---
 
-## 🛠️ Arquitetura e Tecnologias
+## ✨ Funcionalidades
 
-O projeto adota uma arquitetura em camadas visando escalabilidade e manutenção clara:
+### 🔐 Autenticação & Segurança
+- Login com Firebase Authentication  
+- Controle de acesso por função (**RBAC**)  
+- Sessão persistente  
 
-* **Framework:** [Flutter](https://flutter.dev/) (Web)
-* **Gerência de Estado:** [Riverpod](https://riverpod.dev/) (`flutter_riverpod`)
-* **Backend as a Service:** [Firebase](https://firebase.google.com/) (Auth, Cloud Firestore, Hosting)
-* **Roteamento:** `url_strategy` (Path URLs limpas)
-* **Integrações Externas:** * API ImgBB (Armazenamento de Imagens)
-  * A Bíblia Digital API (Versículos Dinâmicos)
+### 🔑 Sistema de Convites
+- Geração de códigos únicos pelo admin  
+- Controle de novos acessos ao sistema  
 
-### 📂 Estrutura de Pastas
+### 🔄 Tempo Real
+- Atualizações instantâneas com **Streams + Riverpod**  
+- UI sempre sincronizada com o banco  
 
-```text
+### 📸 Perfil do Usuário
+- Upload de imagem via **ImgBB API**  
+- Otimização de custos (sem Firebase Storage)  
+
+### ✉️ Recuperação de Senha Customizada
+- Interceptação de links do Firebase  
+- Tela interna personalizada (sem sair do app)  
+
+### 📖 Dashboard Motivacional
+- Versículos dinâmicos via API  
+- Sistema de fallback offline  
+
+---
+
+## 🛠️ Tecnologias Utilizadas
+
+| Tecnologia | Função |
+|----------|--------|
+| Flutter Web | Frontend |
+| Riverpod | Gerência de estado |
+| Firebase Auth | Autenticação |
+| Cloud Firestore | Banco de dados |
+| Firebase Hosting | Deploy |
+| ImgBB API | Upload de imagens |
+| Bíblia Digital API | Conteúdo dinâmico |
+
+---
+
+## 🧱 Arquitetura do Projeto
+
+O projeto segue uma arquitetura organizada em camadas:
+
+```
+
 lib/
- ├── application/         # Lógica de Negócio e Gerenciamento de Estado (Providers)
- │    ├── auth/           # Controladores de Autenticação e Perfil
- │    └── providers/      # Providers externos (ex: API de Versículos)
- ├── infrastructure/      # Integrações de dados e serviços
- │    └── repositories/   # Comunicação com Firebase e APIs HTTP
- ├── presentation/        # Camada de Interface do Usuário (UI)
- │    ├── pages/          # Telas principais (Home, Login, Admin, Settings)
- │    └── widgets/        # Componentes reutilizáveis
- └── main.dart            # Ponto de entrada, Configurações de Rota e Firebase
+├── application/         # Regras de negócio e estado
+│    ├── auth/
+│    └── providers/
+├── infrastructure/      # Integrações externas
+│    └── repositories/
+├── presentation/        # Interface (UI)
+│    ├── pages/
+│    └── widgets/
+└── main.dart
+
+````
+
+---
+
+## 🚀 Como Rodar o Projeto
+
+### 📌 Pré-requisitos
+
+- Flutter instalado  
+- Conta no Firebase  
+- Firebase CLI  
+
+```bash
+npm install -g firebase-tools
+````
+
+---
+
+### ⚙️ Instalação
+
+```bash
+# Clone o projeto
+git clone https://github.com/seu-usuario/colportor-portal.git
+
+# Entre na pasta
+cd colportor-portal
+
+# Instale dependências
+flutter pub get
+
+# Rode o projeto
+flutter run -d chrome
 ```
 
 ---
 
-## 🚀 Como Executar o Projeto
-
-### Pré-requisitos
-* [Flutter SDK](https://docs.flutter.dev/get-started/install) (versão mais recente recomendada)
-* Conta configurada no Firebase
-* Firebase CLI instalado (`npm install -g firebase-tools`)
-
-### Instalação
-
-1. **Clone o repositório:**
-   ```bash
-   git clone [https://github.com/seu-usuario/colportor-portal.git](https://github.com/seu-usuario/colportor-portal.git)
-   ```
-
-2. **Baixe as dependências:**
-   ```bash
-   cd colportor-portal
-   flutter pub get
-   ```
-
-3. **Inicie o servidor de desenvolvimento:**
-   ```bash
-   flutter run -d chrome
-   ```
-
-### 📦 Fazendo o Deploy (Firebase Hosting)
-
-Para compilar e enviar atualizações para a web:
+## 📦 Deploy (Firebase Hosting)
 
 ```bash
-# 1. Compile a versão otimizada para Web
+# Build para produção
 flutter build web
 
-# 2. Envie para o Firebase (certifique-se que o firebase.json aponta para "build/web")
+# Deploy
 firebase deploy --only hosting
 ```
 
 ---
 
+## 📌 Diferenciais do Projeto
+
+✔ Arquitetura limpa e escalável
+✔ Uso eficiente de recursos (sem Firebase Storage)
+✔ Integração com APIs externas
+✔ Experiência de usuário fluida
+✔ Sistema pensado para crescimento real
+
+---
+
 ## 👨‍💻 Autor
 
-Desenvolvido com dedicação por **[Seu Nome/Robério Almeida]** *Desenvolvedor de Software & Entusiasta em Tecnologias Web/Mobile.*
-```
+Desenvolvido por **Robério Almeida**
+💼 Desenvolvedor de Software
 
-**Dica de ouro para o GitHub:** Se você for subir esse projeto para o seu portfólio no GitHub, recomendo tirar 2 ou 3 "prints" (screenshots) da tela de Login, da Home e do Menu Lateral aberto e adicioná-los logo abaixo da seção "Sobre o Projeto". Isso faz toda a diferença para recrutadores!
+---
+
+## ⭐ Contribuição
+
+Sinta-se à vontade para abrir issues ou pull requests!
+
+---
+
+## 📄 Licença
+
+Este projeto está sob a licença MIT.
