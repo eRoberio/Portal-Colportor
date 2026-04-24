@@ -16,6 +16,7 @@ class LoginPage extends ConsumerStatefulWidget {
 // Mude de State para ConsumerState
 class _LoginPageState extends ConsumerState<LoginPage> {
   AuthFormType _currentForm = AuthFormType.login;
+  String _selectedCategoria = 'estudante'; // Padrão
 
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -56,14 +57,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     // Fica "ouvindo" o estado do provedor (Loading, Sucesso, Erro)
     ref.listen<AsyncValue<void>>(authControllerProvider, (previous, next) {
       next.whenOrNull(
-        error: (error, stackTrace) =>
-            _showSnackBar('Erro: ${error.toString()}', isError: true),
-        // O redirecionamento de sucesso faremos automaticamente no main.dart!
+        error: (error, stackTrace) {
+          // LÓGICA ATUALIZADA: Limpa a palavra "Exception: " de qualquer erro do Firebase
+          final cleanError = error.toString().replaceAll('Exception: ', '');
+          _showSnackBar(cleanError, isError: true);
+        },
       );
     });
 
     return Scaffold(
-      // ... (Mantenha o mesmo Scaffold e Container com Gradiente de antes)
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -127,7 +129,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     );
   }
 
-  // ... (Mantenha o switch de _buildCurrentForm)
   Widget _buildCurrentForm() {
     switch (_currentForm) {
       case AuthFormType.login:
@@ -141,7 +142,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   // WIDGET DO LOGIN ATUALIZADO COM RIVERPOD
   Widget _buildLoginForm() {
-    // Vê se está carregando
     final authState = ref.watch(authControllerProvider);
     final isLoading = authState.isLoading;
 
@@ -163,7 +163,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         ),
         const SizedBox(height: 24),
 
-        // Botão com Loading
         isLoading
             ? const CircularProgressIndicator()
             : _buildPrimaryButton('Entrar', const Color(0xFF1E3A8A), () {
@@ -209,7 +208,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     return Column(
       key: const ValueKey('register'),
       children: [
-        // ... (Mantenha os TextFields do cadastro iguais)
         _buildTextField(
           label: 'Código de Convite *',
           hint: 'Digite o código',
@@ -234,6 +232,21 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           hint: '(00) 00000-0000',
           controller: _phoneController,
           keyboardType: TextInputType.phone,
+        ),
+        const SizedBox(height: 16),
+        DropdownButtonFormField<String>(
+          value: _selectedCategoria,
+          decoration: InputDecoration(
+            labelText: 'Categoria *',
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          items: const [
+            DropdownMenuItem(value: 'estudante', child: Text('🎓 Estudante')),
+            DropdownMenuItem(value: 'efetivo', child: Text('👥 Efetivo')),
+          ],
+          onChanged: (val) => setState(() => _selectedCategoria = val!),
         ),
         const SizedBox(height: 16),
         _buildTextField(
@@ -266,13 +279,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         nome: _nameController.text.trim(),
                         telefone: _phoneController.text.trim(),
                         motivo: _motivationController.text.trim(),
-                        inviteCode: _inviteCodeController.text.trim(),
+                        // Transforma em maiúsculo para garantir a leitura no Firestore
+                        inviteCode: _inviteCodeController.text
+                            .trim()
+                            .toUpperCase(),
+                        categoria: _selectedCategoria.trim(),
                       );
-                  // Se não deu erro, voltamos pra tela de login pra ele aguardar aprovação
+
+                  // Se NÃO deu erro, voltamos pra tela de login pra ele aguardar aprovação
                   if (!ref.read(authControllerProvider).hasError) {
-                    _showSnackBar(
-                      'Cadastro realizado! Aguarde a aprovação do Admin.',
-                    );
+                    _showSnackBar('Cadastro realizado com sucesso!');
                     _switchForm(AuthFormType.login);
                   }
                 },
@@ -296,7 +312,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     return Column(
       key: const ValueKey('recover'),
       children: [
-        // ... (Mantenha o TextField do e-mail)
         _buildTextField(
           label: 'E-mail Cadastrado *',
           hint: 'seu@email.com',
@@ -330,9 +345,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       ],
     );
   }
-
-  // ... (Mantenha os métodos _buildTextField, _buildPrimaryButton e _buildSecondaryButton que já fizemos)
-  // Certifique-se de copiá-los do código anterior para o final da classe
 
   // ==========================================
   // WIDGETS AUXILIARES

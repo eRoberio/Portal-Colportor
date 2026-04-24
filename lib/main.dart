@@ -1,24 +1,23 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
-// Importa o pacote para remover o # da URL no web
 
-import 'package:flutter_web_plugins/flutter_web_plugins.dart';
-import 'package:flutter_web_plugins/flutter_web_plugins.dart'
-    show setUrlStrategy, PathUrlStrategy;
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_core/firebase_core.dart';
+// Importação segura:
+import 'package:flutter_web_plugins/url_strategy.dart' show usePathUrlStrategy;
 
 import 'package:colportportal/presentation/pages/reset_password_page.dart';
-import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'presentation/pages/login_page.dart';
 import 'presentation/pages/home_page.dart';
+
 import 'application/auth/auth_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   if (kIsWeb) {
-    setUrlStrategy(PathUrlStrategy()); // Remove o # da URL no web
+    // setUrlStrategy(PathUrlStrategy()); // Remove o # da URL no web
+    usePathUrlStrategy();
   }
 
   // Configurações para cada plataforma

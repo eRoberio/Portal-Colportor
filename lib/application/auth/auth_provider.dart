@@ -51,6 +51,7 @@ class AuthController extends StateNotifier<AsyncValue<void>> {
     required String telefone,
     required String motivo,
     required String inviteCode,
+    required String categoria,
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(
@@ -61,6 +62,7 @@ class AuthController extends StateNotifier<AsyncValue<void>> {
         telefone: telefone,
         motivo: motivo,
         inviteCode: inviteCode,
+        categoria: categoria,
       ),
     );
   }
