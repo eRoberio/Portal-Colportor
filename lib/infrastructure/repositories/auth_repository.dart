@@ -54,7 +54,8 @@ class AuthRepository {
         'telefone': telefone,
         'motivo_solicitacao': motivo,
         'role': 'colportor', // A flag padrão inicial que você pediu
-        'categoria': categoria, // <--- SALVA NO BANCO AQUI (efetivo ou estudante)
+        'categoria':
+            categoria, // <--- SALVA NO BANCO AQUI (efetivo ou estudante)
         'fotoUrl': '',
         'createdAt': FieldValue.serverTimestamp(),
       });

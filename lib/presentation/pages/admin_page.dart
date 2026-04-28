@@ -4,7 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_masked_text2/flutter_masked_text2.dart';
 
 class AdminPage extends StatefulWidget {
   const AdminPage({super.key});
@@ -14,11 +13,16 @@ class AdminPage extends StatefulWidget {
 }
 
 class _AdminPageState extends State<AdminPage> {
-  // Controladores para as metas
+  // 1. CONTROLADORES ATUALIZADOS (Removido o MoneyMasked das Ofertas)
   final _metaHorasCtrl = TextEditingController();
-  final _metaLivrosCtrl = TextEditingController();
-  final _metaOfertasCtrl = MoneyMaskedTextController(leftSymbol: 'R\$ ', decimalSeparator: ',', thousandSeparator: '.');
-  final _metaOracoesCtrl = TextEditingController();
+  final _metaVendasQtdCtrl = TextEditingController(); // Livros + Revistas
+  final _metaOfertasCtrl =
+      TextEditingController(); // Agora é quantidade de abordagens
+  final _metaValorVendasCtrl = TextEditingController(); // Valor em R$
+
+  final _nomeDesafioCtrl = TextEditingController();
+  final _premioCtrl = TextEditingController();
+  final _videoUrlCtrl = TextEditingController();
 
   bool _isLoadingMetas = false;
 
@@ -35,10 +39,17 @@ class _AdminPageState extends State<AdminPage> {
         .get();
     if (doc.exists && doc.data() != null) {
       final data = doc.data()!;
-      _metaHorasCtrl.text = data['horas'].toString();
-      _metaLivrosCtrl.text = data['livros'].toString();
-      _metaOfertasCtrl.text = data['ofertas'].toString();
-      _metaOracoesCtrl.text = data['oracoes'].toString();
+      setState(() {
+        _metaHorasCtrl.text = (data['horas'] ?? '0').toString();
+        _metaVendasQtdCtrl.text = (data['vendas_qtd'] ?? '0').toString();
+        _metaOfertasCtrl.text = (data['ofertas_abordagens'] ?? '0').toString();
+        _metaValorVendasCtrl.text = (data['valor_total_vendas'] ?? '0')
+            .toString();
+
+        _nomeDesafioCtrl.text = data['nome_desafio'] ?? '';
+        _premioCtrl.text = data['premio'] ?? '';
+        _videoUrlCtrl.text = data['video_url'] ?? '';
+      });
     }
   }
 
@@ -49,20 +60,23 @@ class _AdminPageState extends State<AdminPage> {
           .collection('settings')
           .doc('campaign')
           .set({
-            'horas':
-                double.tryParse(_metaHorasCtrl.text.replaceAll(',', '.')) ??
-                100.0,
-            'livros': double.tryParse(_metaLivrosCtrl.text) ?? 50.0,
-            'ofertas':
-                double.tryParse(_metaOfertasCtrl.text.replaceAll(',', '.')) ??
-                2000.0,
-            'oracoes': double.tryParse(_metaOracoesCtrl.text) ?? 200.0,
+            'horas': double.tryParse(_metaHorasCtrl.text) ?? 0,
+            'vendas_qtd': int.tryParse(_metaVendasQtdCtrl.text) ?? 0,
+            'ofertas_abordagens': int.tryParse(_metaOfertasCtrl.text) ?? 0,
+            'valor_total_vendas':
+                double.tryParse(
+                  _metaValorVendasCtrl.text.replaceAll(',', '.'),
+                ) ??
+                0.0,
+            'nome_desafio': _nomeDesafioCtrl.text.trim(),
+            'premio': _premioCtrl.text.trim(),
+            'video_url': _videoUrlCtrl.text.trim(),
             'updatedAt': FieldValue.serverTimestamp(),
           });
       if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('✅ Metas atualizadas!'),
+            content: Text('✅ Configurações salvas!'),
             backgroundColor: Colors.green,
           ),
         );
@@ -75,7 +89,7 @@ class _AdminPageState extends State<AdminPage> {
     setState(() => _isLoadingMetas = false);
   }
 
-  // Lógica dos códigos de convite (mantida igualzinha)
+  // Lógica dos códigos de convite (mantida igual)
   String _gerarCodigoAleatorio() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     final rnd = Random();
@@ -131,22 +145,46 @@ class _AdminPageState extends State<AdminPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ==========================================
-            // 1. CONFIGURAR METAS DA CAMPANHA
+            // 1. IDENTIDADE DO DESAFIO (Campos novos)
             // ==========================================
             Text(
-              '🎯 Metas da Campanha',
+              '🎯 Identidade do Desafio',
               style: GoogleFonts.inter(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
+            _buildTextField(
+              'Nome do Desafio (ex: Operação Resgate)',
+              _nomeDesafioCtrl,
+              isNumeric: false,
+            ),
+            const SizedBox(height: 12),
+            _buildTextField(
+              'Prêmio (ex: Jantar ou Kit)',
+              _premioCtrl,
+              isNumeric: false,
+            ),
+            const SizedBox(height: 12),
+            _buildTextField(
+              'Link do Vídeo (YouTube)',
+              _videoUrlCtrl,
+              isNumeric: false,
+            ),
+            const SizedBox(height: 32),
+
+            // ==========================================
+            // 2. METAS NUMÉRICAS (Ajustado)
+            // ==========================================
             Text(
-              'Estes valores definem as barras de Desafio de todos os colportores.',
-              style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[700]),
+              '📈 Metas da Campanha',
+              style: GoogleFonts.inter(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 16),
-
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -161,11 +199,17 @@ class _AdminPageState extends State<AdminPage> {
                   Row(
                     children: [
                       Expanded(
-                        child: _buildTextField('⏰ Horas', _metaHorasCtrl),
+                        child: _buildTextField(
+                          '⏰ Horas Missionárias',
+                          _metaHorasCtrl,
+                        ),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
-                        child: _buildTextField('📚 Livros', _metaLivrosCtrl),
+                        child: _buildTextField(
+                          '📚 Qtd Vendas',
+                          _metaVendasQtdCtrl,
+                        ),
                       ),
                     ],
                   ),
@@ -173,18 +217,24 @@ class _AdminPageState extends State<AdminPage> {
                   Row(
                     children: [
                       Expanded(
-                        child: _buildTextField('💰 Ofertas', _metaOfertasCtrl),
+                        child: _buildTextField(
+                          '🙋 Ofertas (Abordagens)',
+                          _metaOfertasCtrl,
+                        ),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
-                        child: _buildTextField('🙏 Orações', _metaOracoesCtrl),
+                        child: _buildTextField(
+                          '💰 Valor Total (R\$)',
+                          _metaValorVendasCtrl,
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
                   SizedBox(
                     width: double.infinity,
-                    height: 45,
+                    height: 48,
                     child: _isLoadingMetas
                         ? const Center(child: CircularProgressIndicator())
                         : ElevatedButton.icon(
@@ -195,7 +245,7 @@ class _AdminPageState extends State<AdminPage> {
                               size: 18,
                             ),
                             label: Text(
-                              'Salvar Metas Globais',
+                              'SALVAR CONFIGURAÇÕES',
                               style: GoogleFonts.inter(
                                 fontWeight: FontWeight.bold,
                               ),
@@ -214,10 +264,10 @@ class _AdminPageState extends State<AdminPage> {
             const SizedBox(height: 24),
 
             // ==========================================
-            // 2. GERAR CÓDIGOS DE ACESSO (O SEU ANTIGO)
+            // 3. CÓDIGOS DE ACESSO (Igual ao seu)
             // ==========================================
             Text(
-              '🔑 Gerar Códigos de Acesso',
+              '🔑 Códigos de Acesso',
               style: GoogleFonts.inter(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -244,16 +294,6 @@ class _AdminPageState extends State<AdminPage> {
               ),
             ),
             const SizedBox(height: 24),
-
-            Text(
-              '📋 Códigos Disponíveis',
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-
             StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('invite_codes')
@@ -262,20 +302,16 @@ class _AdminPageState extends State<AdminPage> {
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting)
                   return const Center(child: CircularProgressIndicator());
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty)
-                  return const Text('Nenhum código disponível no momento.');
-
-                final codigos = snapshot.data!.docs;
+                final codigos = snapshot.data?.docs ?? [];
+                if (codigos.isEmpty)
+                  return const Text('Nenhum código disponível.');
                 return ListView.builder(
-                  shrinkWrap:
-                      true, // Necessário dentro do SingleChildScrollView
+                  shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: codigos.length,
                   itemBuilder: (context, index) {
                     final code = codigos[index].id;
                     return Card(
-                      color: Colors.white,
-                      margin: const EdgeInsets.only(bottom: 8),
                       child: ListTile(
                         leading: const Icon(
                           LucideIcons.key,
@@ -311,14 +347,12 @@ class _AdminPageState extends State<AdminPage> {
     );
   }
 
-  // Campo de texto padronizado para as metas
-  Widget _buildTextField(String label, TextEditingController controller) {
-    List<TextInputFormatter> inputFormatters = [];
-    if (controller is MoneyMaskedTextController) {
-      // No formatter needed, handled by controller
-    } else {
-      inputFormatters = [FilteringTextInputFormatter.digitsOnly];
-    }
+  // Widget de texto padronizado atualizado
+  Widget _buildTextField(
+    String label,
+    TextEditingController controller, {
+    bool isNumeric = true,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -333,10 +367,12 @@ class _AdminPageState extends State<AdminPage> {
         const SizedBox(height: 6),
         TextField(
           controller: controller,
-          keyboardType: controller is MoneyMaskedTextController
-              ? TextInputType.number
-              : TextInputType.number,
-          inputFormatters: inputFormatters,
+          keyboardType: isNumeric
+              ? const TextInputType.numberWithOptions(decimal: true)
+              : TextInputType.text,
+          inputFormatters: isNumeric
+              ? [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))]
+              : [],
           decoration: InputDecoration(
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 12,

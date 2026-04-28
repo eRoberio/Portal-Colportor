@@ -22,16 +22,19 @@ class _RankingsPageState extends ConsumerState<RankingsPage> {
   String _categoriaSelecionada = 'estudante';
 
   @override
+  void initState() {
+    super.initState();
+    _categoriaSelecionada = widget.minhaCategoria;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // Escuta o provider correto: monthlyRankingProvider
     final rankingAsync = ref.watch(monthlyRankingProvider);
     final usersMapAsync = ref.watch(allUsersProvider);
-
-    // Puxa os dados que vieram da tela anterior (Home)
-    final isAdmin = widget.isAdmin;
-    final minhaCategoria = widget.minhaCategoria;
-
-    // Determina o que será exibido
-    final categoriaAtiva = isAdmin ? _categoriaSelecionada : minhaCategoria;
+    final categoriaAtiva = widget.isAdmin
+        ? _categoriaSelecionada
+        : widget.minhaCategoria;
 
     return DefaultTabController(
       length: 3,
@@ -56,13 +59,14 @@ class _RankingsPageState extends ConsumerState<RankingsPage> {
             tabs: const [
               Tab(icon: Icon(LucideIcons.clock), text: 'Horas'),
               Tab(icon: Icon(LucideIcons.bookOpen), text: 'Livros'),
-              Tab(icon: Icon(LucideIcons.coins), text: 'Ofertas'),
+              Tab(icon: Icon(LucideIcons.users), text: 'Abordagens'),
             ],
           ),
         ),
         body: Column(
           children: [
-            if (isAdmin)
+            // SELETOR SÓ PARA ADMIN
+            if (widget.isAdmin)
               Container(
                 color: const Color(0xFF1E3A8A),
                 padding: const EdgeInsets.only(bottom: 16, left: 16, right: 16),
@@ -79,17 +83,19 @@ class _RankingsPageState extends ConsumerState<RankingsPage> {
                 ),
               ),
 
+            // LISTA DE RESULTADOS
             Expanded(
               child: rankingAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (err, stack) =>
-                    const Center(child: Text('Erro ao carregar o ranking.')),
+                    Center(child: Text('Erro ao carregar dados: $err')),
                 data: (rankingList) {
                   return usersMapAsync.when(
                     loading: () =>
                         const Center(child: CircularProgressIndicator()),
                     error: (err, stack) => const SizedBox.shrink(),
                     data: (usersMap) {
+                      // 1. Filtra pela Categoria Ativa (Efetivo ou Estudante)
                       final listaFiltrada = rankingList.where((stats) {
                         final uid = stats['uid'];
                         return usersMap[uid]?['categoria'] == categoriaAtiva;
@@ -98,12 +104,17 @@ class _RankingsPageState extends ConsumerState<RankingsPage> {
                       if (listaFiltrada.isEmpty) {
                         return Center(
                           child: Text(
-                            'Nenhum dado para ${categoriaAtiva == 'efetivo' ? 'Efetivos' : 'Estudantes'} este mês.',
-                            style: GoogleFonts.inter(color: Colors.grey),
+                            'Sem relatórios para ${categoriaAtiva} este mês.',
+                            style: GoogleFonts.inter(
+                              color: Colors.grey[600],
+                              fontSize: 16,
+                            ),
                           ),
                         );
                       }
 
+                      // 2. Renderiza as listas.
+                      // NOTA: As chaves devem bater com as geradas no monthlyRankingProvider
                       return TabBarView(
                         children: [
                           _buildLeaderboardList(
@@ -111,19 +122,21 @@ class _RankingsPageState extends ConsumerState<RankingsPage> {
                             usersMap,
                             'horas',
                             'h',
+                            false,
                           ),
                           _buildLeaderboardList(
                             listaFiltrada,
                             usersMap,
-                            'livros',
+                            'vendas_qtd',
                             ' un',
+                            false,
                           ),
                           _buildLeaderboardList(
                             listaFiltrada,
                             usersMap,
-                            'ofertas',
-                            'R\$',
-                            isCurrency: true,
+                            'ofertas_abordagens',
+                            ' abord.',
+                            false,
                           ),
                         ],
                       );
@@ -166,25 +179,35 @@ class _RankingsPageState extends ConsumerState<RankingsPage> {
     List<Map<String, dynamic>> filteredList,
     Map<String, dynamic> usersMap,
     String sortKey,
-    String unit, {
-    bool isCurrency = false,
-  }) {
+    String unit,
+    bool isCurrency,
+  ) {
+    // Clona a lista para não mutar a original
     final sortedList = List<Map<String, dynamic>>.from(filteredList);
-    sortedList.sort((a, b) => (b[sortKey] as num).compareTo(a[sortKey] as num));
+
+    // Ordena de forma segura (usando num para evitar erros de casting)
+    sortedList.sort((a, b) {
+      final valA = (a[sortKey] ?? 0) as num;
+      final valB = (b[sortKey] ?? 0) as num;
+      return valB.compareTo(valA);
+    });
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: sortedList.length,
       itemBuilder: (context, index) {
         final item = sortedList[index];
-        final uid = item['uid'];
-        final score = item[sortKey];
+        final score = (item[sortKey] ?? 0) as num;
+
+        // Se a pontuação for zero, não mostra no ranking
         if (score <= 0) return const SizedBox.shrink();
 
+        final uid = item['uid'];
         final userData = usersMap[uid];
         final nome = userData?['nome'] ?? 'Colportor';
         final fotoUrl = userData?['fotoUrl'];
 
+        // Medalhas e Ícones
         Widget leadingWidget;
         if (index == 0)
           leadingWidget = const Text('🥇', style: TextStyle(fontSize: 28));
@@ -219,11 +242,19 @@ class _RankingsPageState extends ConsumerState<RankingsPage> {
               children: [
                 CircleAvatar(
                   radius: 14,
-                  backgroundImage: (fotoUrl != null && fotoUrl.isNotEmpty)
+                  backgroundImage:
+                      (fotoUrl != null && fotoUrl.toString().isNotEmpty)
                       ? NetworkImage(fotoUrl)
                       : null,
-                  child: (fotoUrl == null || fotoUrl.isEmpty)
-                      ? Text(nome[0])
+                  backgroundColor: const Color(0xFF1E3A8A),
+                  child: (fotoUrl == null || fotoUrl.toString().isEmpty)
+                      ? Text(
+                          nome[0].toUpperCase(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                          ),
+                        )
                       : null,
                 ),
                 const SizedBox(width: 10),

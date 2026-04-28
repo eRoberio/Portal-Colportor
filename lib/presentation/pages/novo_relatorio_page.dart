@@ -1,88 +1,114 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lucide_icons/lucide_icons.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_masked_text2/flutter_masked_text2.dart';
-import '../../application/reports/report_provider.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class NovoRelatorioPage extends ConsumerStatefulWidget {
-  final String uid; // Precisamos saber de quem é o relatório
+class NovoRelatorioPage extends StatefulWidget {
+  final String uid;
 
   const NovoRelatorioPage({super.key, required this.uid});
 
   @override
-  ConsumerState<NovoRelatorioPage> createState() => _NovoRelatorioPageState();
+  State<NovoRelatorioPage> createState() => _NovoRelatorioPageState();
 }
 
-class _NovoRelatorioPageState extends ConsumerState<NovoRelatorioPage> {
+class _NovoRelatorioPageState extends State<NovoRelatorioPage> {
   final _formKey = GlobalKey<FormState>();
-  final _horasController = TextEditingController();
-  final _oracoesController = TextEditingController();
-  final _ofertasController = MoneyMaskedTextController(
-    leftSymbol: 'R\$ ',
-    decimalSeparator: ',',
-    thousandSeparator: '.',
-  );
-  final _livrosController = TextEditingController();
-  final _obsController = TextEditingController();
+  bool _isLoading = false;
 
-  @override
-  void dispose() {
-    _horasController.dispose();
-    _oracoesController.dispose();
-    _ofertasController.dispose();
-    _livrosController.dispose();
-    _obsController.dispose();
-    super.dispose();
-  }
+  // Controladores
+  final _visitasCtrl = TextEditingController();
+  final _ofertasAbordagensCtrl = TextEditingController();
+  final _vendasQtdCtrl = TextEditingController();
+  final _valorDinheiroCtrl = TextEditingController();
+  final _horasCtrl = TextEditingController();
+  final _gratisCtrl = TextEditingController();
+  final _interessadosCtrl = TextEditingController();
+  final _batismosCtrl = TextEditingController();
 
   Future<void> _enviarRelatorio() async {
-    if (_formKey.currentState!.validate()) {
-      final horas =
-          double.tryParse(_horasController.text.replaceAll(',', '.')) ?? 0.0;
-      final oracoes = int.tryParse(_oracoesController.text) ?? 0;
-      // Remove R$ and formatting for parsing
-      final ofertas =
-          double.tryParse(
-            _ofertasController.text
-                .replaceAll('R\$', '')
-                .replaceAll('.', '')
-                .replaceAll(',', '.')
-                .trim(),
-          ) ??
-          0.0;
-      final livros = int.tryParse(_livrosController.text) ?? 0;
+    if (!_formKey.currentState!.validate()) return;
 
-      await ref
-          .read(reportControllerProvider.notifier)
-          .submitReport(
-            uid: widget.uid,
-            horas: horas,
-            oracoes: oracoes,
-            ofertas: ofertas,
-            livros: livros,
-            observacoes: _obsController.text.trim(),
-          );
+    setState(() => _isLoading = true);
 
-      final state = ref.read(reportControllerProvider);
-      if (mounted && !state.hasError) {
+    try {
+      // Busca a categoria do usuário para o ranking
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.uid)
+          .get();
+      final categoria = userDoc.data()?['categoria'] ?? 'estudante';
+
+      await FirebaseFirestore.instance.collection('reports').add({
+        'uid': widget.uid,
+        'categoria': categoria,
+        'data_envio': FieldValue.serverTimestamp(),
+        // Inteiros
+        'visitas':
+            int.tryParse(_visitasCtrl.text.replaceAll(RegExp(r'[^0-9]'), '')) ??
+            0,
+        'ofertas_abordagens':
+            int.tryParse(
+              _ofertasAbordagensCtrl.text.replaceAll(RegExp(r'[^0-9]'), ''),
+            ) ??
+            0,
+        'vendas_qtd':
+            int.tryParse(
+              _vendasQtdCtrl.text.replaceAll(RegExp(r'[^0-9]'), ''),
+            ) ??
+            0,
+        'literatura_gratis':
+            int.tryParse(_gratisCtrl.text.replaceAll(RegExp(r'[^0-9]'), '')) ??
+            0,
+        'interessados':
+            int.tryParse(
+              _interessadosCtrl.text.replaceAll(RegExp(r'[^0-9]'), ''),
+            ) ??
+            0,
+        'batismos':
+            int.tryParse(
+              _batismosCtrl.text.replaceAll(RegExp(r'[^0-9]'), ''),
+            ) ??
+            0,
+        // Decimais
+        'valor_vendas':
+            double.tryParse(
+              _valorDinheiroCtrl.text
+                  .replaceAll(',', '.')
+                  .replaceAll(RegExp(r'[^0-9.]'), ''),
+            ) ??
+            0.0,
+        'horas_missionarias':
+            double.tryParse(
+              _horasCtrl.text
+                  .replaceAll(',', '.')
+                  .replaceAll(RegExp(r'[^0-9.]'), ''),
+            ) ??
+            0.0,
+      });
+
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('✅ Relatório enviado com sucesso!'),
+            content: Text('✅ Relatório enviado!'),
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.pop(context); // Volta para a Home
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('❌ Erro: $e'), backgroundColor: Colors.red),
+        );
       }
     }
+
+    setState(() => _isLoading = false);
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(reportControllerProvider);
-    final isLoading = state.isLoading;
-
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
@@ -97,40 +123,37 @@ class _NovoRelatorioPageState extends ConsumerState<NovoRelatorioPage> {
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(20),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Resumo do Dia',
+                'Resumo Diário',
                 style: GoogleFonts.inter(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: const Color(0xFF333333),
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Preencha os dados do seu trabalho de hoje com fidelidade.',
-                style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[700]),
-              ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
-              // Grid para colocar os campos lado a lado e economizar espaço
               Row(
                 children: [
                   Expanded(
-                    child: _buildNumberField(
-                      '⏰ Horas (ex: 4.5)',
-                      _horasController,
-                      isDecimal: true,
+                    child: _buildNumField(
+                      '🏠 Visitas (Casas)',
+                      _visitasCtrl,
+                      false,
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: _buildNumberField('🙏 Orações', _oracoesController),
+                    child: _buildNumField(
+                      '🙋 Abordagens',
+                      _ofertasAbordagensCtrl,
+                      false,
+                    ),
                   ),
                 ],
               ),
@@ -138,62 +161,73 @@ class _NovoRelatorioPageState extends ConsumerState<NovoRelatorioPage> {
               Row(
                 children: [
                   Expanded(
-                    child: _buildNumberField(
-                      '💰 Ofertas (R\$)',
-                      _ofertasController,
-                      isDecimal: true,
+                    child: _buildNumField(
+                      '📚 Vendas (Qtd)',
+                      _vendasQtdCtrl,
+                      false,
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: _buildNumberField('📚 Livros', _livrosController),
+                    child: _buildNumField(
+                      '💰 Valor (R\$)',
+                      _valorDinheiroCtrl,
+                      true,
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildNumField('⏱ Horas Miss.', _horasCtrl, true),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildNumField('📖 Lit. Grátis', _gratisCtrl, false),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildNumField(
+                      '📖 Estudos',
+                      _interessadosCtrl,
+                      false,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildNumField('✝️ Batismos', _batismosCtrl, false),
+                  ),
+                ],
+              ),
 
-              Text(
-                'Observações (Opcional)',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _obsController,
-                maxLines: 3,
-                decoration: _inputDecoration(
-                  hint: 'Alguma experiência marcante hoje?',
-                ),
-              ),
               const SizedBox(height: 32),
 
-              isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : SizedBox(
-                      width: double.infinity,
-                      height: 55,
-                      child: ElevatedButton.icon(
+              SizedBox(
+                width: double.infinity,
+                height: 55,
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : ElevatedButton(
                         onPressed: _enviarRelatorio,
-                        icon: const Icon(LucideIcons.send, color: Colors.white),
-                        label: Text(
-                          'Enviar Relatório',
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF10B981),
+                          foregroundColor: Colors.white,
+                        ),
+                        child: Text(
+                          'ENVIAR RELATÓRIO',
                           style: GoogleFonts.inter(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF10B981), // Verde
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
                       ),
-                    ),
+              ),
             ],
           ),
         ),
@@ -201,69 +235,44 @@ class _NovoRelatorioPageState extends ConsumerState<NovoRelatorioPage> {
     );
   }
 
-  Widget _buildNumberField(
+  Widget _buildNumField(
     String label,
-    TextEditingController controller, {
-    bool isDecimal = false,
-  }) {
-    List<TextInputFormatter> inputFormatters = [];
-    if (controller is MoneyMaskedTextController) {
-      // No formatter needed, handled by controller
-    } else if (isDecimal) {
-      inputFormatters = [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))];
-    } else {
-      inputFormatters = [FilteringTextInputFormatter.digitsOnly];
-    }
+    TextEditingController controller,
+    bool isDecimal,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
           style: GoogleFonts.inter(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey[800],
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         TextFormField(
           controller: controller,
-          keyboardType: controller is MoneyMaskedTextController
-              ? TextInputType.number
-              : TextInputType.numberWithOptions(decimal: isDecimal),
-          inputFormatters: inputFormatters,
-          validator: (value) {
-            if (value == null || value.isEmpty) return 'Obrigatório';
-            return null;
-          },
-          decoration: _inputDecoration(),
+          keyboardType: TextInputType.numberWithOptions(decimal: isDecimal),
+          inputFormatters: isDecimal
+              ? [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))]
+              : [FilteringTextInputFormatter.digitsOnly],
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: Colors.white,
+            hintText: '0',
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+          ),
         ),
       ],
-    );
-  }
-
-  InputDecoration _inputDecoration({String? hint}) {
-    return InputDecoration(
-      filled: true,
-      fillColor: Colors.white,
-      hintText: hint,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 2),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFF1E3A8A), width: 2),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Colors.redAccent, width: 2),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Colors.redAccent, width: 2),
-      ),
     );
   }
 }

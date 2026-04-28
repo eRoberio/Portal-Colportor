@@ -6,6 +6,9 @@ import 'dart:math';
 import '../../constants/bible_database.dart';
 import '../../constants/egw_database.dart';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 // 1. Controlador para SALVAR um novo relatório
 class ReportController extends StateNotifier<AsyncValue<void>> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -58,35 +61,43 @@ final userReportsProvider = StreamProvider.family<QuerySnapshot, String>((
 // =========================================================================
 // 4. Provedor que SOMA todas as estatísticas do usuário
 // =========================================================================
+// Provedor das Metas e Vídeo (Admin)
+final campaignSettingsProvider = StreamProvider<Map<String, dynamic>>((ref) {
+  return FirebaseFirestore.instance
+      .collection('settings')
+      .doc('campaign')
+      .snapshots()
+      .map((doc) => doc.data() ?? {});
+});
+
+// Provedor de Estatísticas Individuais (Ajustado para a nova especificação)
+// Provedor para as estatísticas que alimentam os Desafios
 final userTotalStatsProvider =
-    StreamProvider.family<Map<String, dynamic>, String>((ref, String uid) {
+    StreamProvider.family<Map<String, dynamic>, String>((ref, uid) {
       return FirebaseFirestore.instance
           .collection('reports')
           .where('uid', isEqualTo: uid)
           .snapshots()
-          .map((snapshot) {
-            double totalHoras = 0.0;
-            int totalOracoes = 0;
-            double totalOfertas = 0.0;
-            int totalLivros = 0;
+          .map((snap) {
+            double horas = 0, valor = 0;
+            int vendas = 0, ofertas = 0;
 
-            for (var doc in snapshot.docs) {
-              final data = doc.data();
-              totalHoras += (data['horas'] ?? 0.0).toDouble();
-              totalOracoes += (data['oracoes'] ?? 0) is int
-                  ? (data['oracoes'] ?? 0) as int
-                  : ((data['oracoes'] ?? 0) as num).toInt();
-              totalOfertas += (data['ofertas'] ?? 0.0).toDouble();
-              totalLivros += (data['livros'] ?? 0) is int
-                  ? (data['livros'] ?? 0) as int
-                  : ((data['livros'] ?? 0) as num).toInt();
+            for (var doc in snap.docs) {
+              final d = doc.data();
+              // Use .toDouble() ou .toInt() para evitar erro de 'num'
+              horas += (d['horas_missionarias'] ?? 0).toDouble();
+              valor += (d['valor_vendas'] ?? 0).toDouble();
+              vendas += ((d['vendas_qtd'] ?? 0) as num).toInt();
+              ofertas += ((d['ofertas_abordagens'] ?? 0) as num).toInt();
+              // visitas += ((d['visitas'] ?? 0) as num).toInt();
+              // interessados += ((d['interessados'] ?? 0) as num).toInt();
+              // batismos += ((d['batismos'] ?? 0) as num).toInt();
             }
-
             return {
-              'horas': totalHoras,
-              'oracoes': totalOracoes,
-              'ofertas': totalOfertas,
-              'livros': totalLivros,
+              'horas': horas,
+              'valor': valor,
+              'vendas': vendas,
+              'ofertas': ofertas,
             };
           });
     });
@@ -143,41 +154,40 @@ final todaysChampionsProvider = StreamProvider<List<Map<String, dynamic>>>((
 // =========================================================================
 // 7. Provedor de Ranking Mensal (Tabela de Classificação Completa)
 // =========================================================================
+// 6. Ranking Mensal
 final monthlyRankingProvider = StreamProvider<List<Map<String, dynamic>>>((
   ref,
 ) {
-  // Pega o primeiro dia do mês atual
   final now = DateTime.now();
-  final startOfMonth = DateTime(now.year, now.month, 1);
+  final primeiroDia = DateTime(now.year, now.month, 1);
 
   return FirebaseFirestore.instance
       .collection('reports')
-      .where('data_envio', isGreaterThanOrEqualTo: startOfMonth)
+      .where('data_envio', isGreaterThanOrEqualTo: primeiroDia)
       .snapshots()
-      .map((snapshot) {
-        final userStats = <String, Map<String, dynamic>>{};
+      .map((snap) {
+        final stats = <String, Map<String, dynamic>>{};
 
-        // Agrupa e soma os relatórios de cada usuário no mês
-        for (var doc in snapshot.docs) {
-          final data = doc.data();
-          final uid = data['uid'] as String;
+        for (var doc in snap.docs) {
+          final d = doc.data();
+          final uid = d['uid'];
 
-          if (!userStats.containsKey(uid)) {
-            userStats[uid] = {
+          if (!stats.containsKey(uid)) {
+            stats[uid] = {
               'uid': uid,
               'horas': 0.0,
-              'ofertas': 0.0,
-              'livros': 0,
+              'vendas_qtd': 0,
+              'ofertas_abordagens': 0,
             };
           }
 
-          userStats[uid]!['horas'] += (data['horas'] ?? 0.0).toDouble();
-          userStats[uid]!['ofertas'] += (data['ofertas'] ?? 0.0).toDouble();
-          userStats[uid]!['livros'] += (data['livros'] ?? 0).toInt();
+          // Acumula os valores
+          stats[uid]!['horas'] += (d['horas_missionarias'] ?? 0).toDouble();
+          stats[uid]!['vendas_qtd'] += (d['vendas_qtd'] ?? 0).toInt();
+          stats[uid]!['ofertas_abordagens'] += (d['ofertas_abordagens'] ?? 0)
+              .toInt();
         }
-
-        // Retorna a lista de usuários com suas pontuações totais
-        return userStats.values.toList();
+        return stats.values.toList();
       });
 });
 

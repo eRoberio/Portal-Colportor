@@ -1,5 +1,7 @@
 enum Role { admin, colportor }
+
 enum Setor { efetivo, estudante, administrativo, nenhum }
+
 enum ColportorStatus { pending, approved, rejected }
 
 class Colportor {

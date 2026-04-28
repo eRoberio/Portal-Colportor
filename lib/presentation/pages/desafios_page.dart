@@ -1,19 +1,44 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import '../../application/reports/report_provider.dart';
 
-class DesafiosPage extends ConsumerWidget {
+class DesafiosPage extends ConsumerStatefulWidget {
   final String uid;
-
   const DesafiosPage({super.key, required this.uid});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Agora assistimos a DOIS provedores: O que o usuário fez e o que o Admin pediu!
-    final statsAsync = ref.watch(userTotalStatsProvider(uid));
-    final goalsAsync = ref.watch(campaignGoalsProvider);
+  ConsumerState<DesafiosPage> createState() => _DesafiosPageState();
+}
+
+class _DesafiosPageState extends ConsumerState<DesafiosPage> {
+  YoutubePlayerController? _videoController;
+  bool _isVideoInitialized = false;
+
+  @override
+  void dispose() {
+    _videoController?.dispose();
+    super.dispose();
+  }
+
+  void _initVideo(String url) {
+    if (_isVideoInitialized || url.isEmpty) return;
+    final videoId = YoutubePlayer.convertUrlToId(url);
+    if (videoId != null) {
+      _videoController = YoutubePlayerController(
+        initialVideoId: videoId,
+        flags: const YoutubePlayerFlags(autoPlay: false, mute: false),
+      );
+      _isVideoInitialized = true;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final campaignAsync = ref.watch(campaignSettingsProvider);
+    final statsAsync = ref.watch(userTotalStatsProvider(widget.uid));
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
@@ -28,195 +53,396 @@ class DesafiosPage extends ConsumerWidget {
         backgroundColor: const Color(0xFF1E3A8A),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      // Mostra loading se QUALQUER UM dos dois estiver carregando
-      body: (statsAsync.isLoading || goalsAsync.isLoading)
-          ? const Center(child: CircularProgressIndicator())
-          : statsAsync.when(
-              error: (err, stack) =>
-                  const Center(child: Text('Erro ao carregar dados.')),
-              data: (stats) {
-                // Pegamos as metas configuradas pelo Admin
-                final goals =
-                    goalsAsync.value ??
-                    {
-                      'horas': 100.0,
-                      'livros': 50.0,
-                      'ofertas': 2000.0,
-                      'oracoes': 200.0,
-                    };
+      body: campaignAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, _) =>
+            const Center(child: Text('Erro ao carregar campanha.')),
+        data: (config) {
+          if (config.isEmpty)
+            return const Center(
+              child: Text("Nenhum desafio ativo no momento."),
+            );
 
-                final horas = stats['horas'] ?? 0.0;
-                final livros = stats['livros'] ?? 0;
-                final oracoes = stats['oracoes'] ?? 0;
-                final ofertas = stats['ofertas'] ?? 0.0;
+          // Chama a inicialização de forma segura
+          _initVideo(config['video_url'] ?? '');
 
-                return ListView(
-                  padding: const EdgeInsets.all(20.0),
-                  children: [
-                    Text(
-                      'Metas da Campanha',
-                      style: GoogleFonts.inter(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF333333),
-                      ),
+          return statsAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (err, _) =>
+                const Center(child: Text('Erro ao carregar seu progresso.')),
+            data: (stats) {
+              return ListView(
+                padding: const EdgeInsets.all(20),
+                children: [
+                  // ... (Mantém o teu Container de HEADER DO DESAFIO igual) ...
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: const Color(
+                        0xFFE89A0E,
+                      ), // Cor baseada na tua imagem
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Acompanhe seu progresso atualizado.',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: Colors.grey[700],
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          (config['nome_desafio'] ?? 'OPERAÇÃO RESGATE')
+                              .toString()
+                              .toUpperCase(),
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Icon(
+                              LucideIcons.gift,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Prêmio: ${config['premio'] ?? 'Jantar'}',
+                              style: GoogleFonts.inter(
+                                color: Colors.white,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // 2. VÍDEO PROMOCIONAL (CORRIGIDO PARA REPRODUÇÃO)
+                  if (_videoController != null) ...[
+                    Row(
+                      children: [
+                        const Icon(LucideIcons.clapperboard, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Missão da Semana',
+                          style: GoogleFonts.inter(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.red.shade600,
+                          width: 2,
+                        ), // Borda vermelha da tua imagem
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Colors.black26,
+                            blurRadius: 10,
+                            offset: Offset(0, 5),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: YoutubePlayer(
+                          controller: _videoController!,
+                          showVideoProgressIndicator: true,
+                          progressIndicatorColor: Colors.red,
+                          progressColors: const ProgressBarColors(
+                            playedColor: Colors.red,
+                            handleColor: Colors.redAccent,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 24),
-
-                    _buildChallengeCard(
-                      title: 'Espírito de Profecia',
-                      description:
-                          'Distribua ${goals['livros']?.toInt()} livros.',
-                      icon: LucideIcons.bookOpen,
-                      color: const Color(0xFF3B82F6),
-                      currentValue: livros.toDouble(),
-                      goalValue: (goals['livros'] ?? 50).toDouble(),
-                      unit: 'livros',
-                    ),
-
-                    _buildChallengeCard(
-                      title: 'Trabalhador Incansável',
-                      description:
-                          'Alcance ${goals['horas']?.toInt()} horas de campo.',
-                      icon: LucideIcons.clock,
-                      color: const Color(0xFFF59E0B),
-                      currentValue: horas,
-                      goalValue: (goals['horas'] ?? 100).toDouble(),
-                      unit: 'horas',
-                    ),
-
-                    _buildChallengeCard(
-                      title: 'Guerreiro de Oração',
-                      description:
-                          'Ore com ${goals['oracoes']?.toInt()} famílias.',
-                      icon: LucideIcons.heartHandshake,
-                      color: const Color(0xFF10B981),
-                      currentValue: oracoes.toDouble(),
-                      goalValue: (goals['oracoes'] ?? 200).toDouble(),
-                      unit: 'orações',
-                    ),
-
-                    _buildChallengeCard(
-                      title: 'Semeador Fiel',
-                      description:
-                          'Arrecade R\$ ${goals['ofertas']?.toStringAsFixed(0)}.',
-                      icon: LucideIcons.coins,
-                      color: const Color(0xFF8B5CF6),
-                      currentValue: ofertas,
-                      goalValue: (goals['ofertas'] ?? 2000).toDouble(),
-                      unit: 'reais',
-                      isCurrency: true,
-                    ),
                   ],
-                );
-              },
-              loading: () {
-                return const Center(child: CircularProgressIndicator());
-              },
-            ),
+
+                  // 2. VÍDEO PROMOCIONAL
+                  // if (_videoController != null) ...[
+                  //   Text(
+                  //     '🎬 Missão da Semana',
+                  //     style: GoogleFonts.inter(
+                  //       fontSize: 18,
+                  //       fontWeight: FontWeight.bold,
+                  //     ),
+                  //   ),
+                  //   const SizedBox(height: 12),
+                  //   ClipRRect(
+                  //     borderRadius: BorderRadius.circular(12),
+                  //     child: YoutubePlayer(controller: _videoController!),
+                  //   ),
+                  //   const SizedBox(height: 24),
+                  // ],
+                  Text(
+                    '📊 Seu Progresso',
+                    style: GoogleFonts.inter(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // 3. BARRAS DE PROGRESSO
+                  _buildProgressCard(
+                    '⏱ Horas Missionárias',
+                    stats['horas'],
+                    config['horas'],
+                    'h',
+                    Colors.blue,
+                  ),
+                  _buildProgressCard(
+                    '🙋 Abordagens (Ofertas)',
+                    stats['ofertas'],
+                    config['ofertas_abordagens'] ?? config['ofertas'],
+                    ' pessoas',
+                    Colors.orange,
+                  ),
+                  _buildProgressCard(
+                    '📚 Qtd Vendas',
+                    stats['vendas'],
+                    config['vendas_qtd'],
+                    ' un',
+                    Colors.green,
+                  ),
+                  _buildProgressCard(
+                    '💰 Valor Arrecadado',
+                    stats['valor'],
+                    config['valor_total_vendas'] ?? config['valor_vendas'],
+                    ' R\$',
+                    Colors.purple,
+                    isMoney: true,
+                  ),
+
+                  // ... (Mantém as BARRAS DE PROGRESSO iguais) ...
+                ],
+              );
+            },
+          );
+        },
+      ),
     );
   }
 
-  // Widget visual do Card de Desafio
-  Widget _buildChallengeCard({
-    required String title,
-    required String description,
-    required IconData icon,
-    required Color color,
-    required double currentValue,
-    required double goalValue,
-    required String unit,
-    bool isCurrency = false,
+  // Widget build(BuildContext context) {
+  //   final campaignAsync = ref.watch(campaignSettingsProvider);
+  //   final statsAsync = ref.watch(userTotalStatsProvider(widget.uid));
+
+  //   return Scaffold(
+  //     backgroundColor: const Color(0xFFF5F5F5),
+  //     appBar: AppBar(
+  //       title: Text(
+  //         'Desafios Ativos',
+  //         style: GoogleFonts.inter(
+  //           fontWeight: FontWeight.bold,
+  //           color: Colors.white,
+  //         ),
+  //       ),
+  //       backgroundColor: const Color(0xFF1E3A8A),
+  //       iconTheme: const IconThemeData(color: Colors.white),
+  //     ),
+  //     body: campaignAsync.when(
+  //       loading: () => const Center(child: CircularProgressIndicator()),
+  //       error: (err, _) =>
+  //           const Center(child: Text('Erro ao carregar campanha.')),
+  //       data: (config) {
+  //         if (config.isEmpty)
+  //           return const Center(
+  //             child: Text("Nenhum desafio ativo no momento."),
+  //           );
+
+  //         _initVideo(config['video_url'] ?? '');
+
+  //         return statsAsync.when(
+  //           loading: () => const Center(child: CircularProgressIndicator()),
+  //           error: (err, _) =>
+  //               const Center(child: Text('Erro ao carregar seu progresso.')),
+  //           data: (stats) {
+  //             return ListView(
+  //               padding: const EdgeInsets.all(20),
+  //               children: [
+  //                 // 1. HEADER DO DESAFIO (Nome e Prêmio)
+  //                 Container(
+  //                   padding: const EdgeInsets.all(20),
+  //                   decoration: BoxDecoration(
+  //                     gradient: const LinearGradient(
+  //                       colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+  //                     ),
+  //                     borderRadius: BorderRadius.circular(16),
+  //                     boxShadow: const [
+  //                       BoxShadow(color: Colors.black12, blurRadius: 8),
+  //                     ],
+  //                   ),
+  //                   child: Column(
+  //                     crossAxisAlignment: CrossAxisAlignment.start,
+  //                     children: [
+  //                       Text(
+  //                         (config['nome_desafio'] ?? 'Desafio da Semana')
+  //                             .toString()
+  //                             .toUpperCase(),
+  //                         style: GoogleFonts.inter(
+  //                           color: Colors.white,
+  //                           fontSize: 22,
+  //                           fontWeight: FontWeight.w900,
+  //                         ),
+  //                       ),
+  //                       const SizedBox(height: 8),
+  //                       Row(
+  //                         children: [
+  //                           const Icon(
+  //                             LucideIcons.gift,
+  //                             color: Colors.white,
+  //                             size: 24,
+  //                           ),
+  //                           const SizedBox(width: 8),
+  //                           Expanded(
+  //                             child: Text(
+  //                               'Prêmio: ${config['premio'] ?? 'Surpresa!'}',
+  //                               style: GoogleFonts.inter(
+  //                                 color: Colors.white,
+  //                                 fontSize: 16,
+  //                                 fontWeight: FontWeight.w600,
+  //                               ),
+  //                             ),
+  //                           ),
+  //                         ],
+  //                       ),
+  //                     ],
+  //                   ),
+  //                 ),
+  //                 const SizedBox(height: 24),
+
+  //                 // 2. VÍDEO PROMOCIONAL
+  //                 if (_videoController != null) ...[
+  //                   Text(
+  //                     '🎬 Missão da Semana',
+  //                     style: GoogleFonts.inter(
+  //                       fontSize: 18,
+  //                       fontWeight: FontWeight.bold,
+  //                     ),
+  //                   ),
+  //                   const SizedBox(height: 12),
+  //                   ClipRRect(
+  //                     borderRadius: BorderRadius.circular(12),
+  //                     child: YoutubePlayer(controller: _videoController!),
+  //                   ),
+  //                   const SizedBox(height: 24),
+  //                 ],
+
+  //                 Text(
+  //                   '📊 Seu Progresso',
+  //                   style: GoogleFonts.inter(
+  //                     fontSize: 18,
+  //                     fontWeight: FontWeight.bold,
+  //                   ),
+  //                 ),
+  //                 const SizedBox(height: 16),
+
+  //                 // 3. BARRAS DE PROGRESSO
+  //                 _buildProgressCard(
+  //                   '⏱ Horas Missionárias',
+  //                   stats['horas'],
+  //                   config['horas'],
+  //                   'h',
+  //                   Colors.blue,
+  //                 ),
+  //                 _buildProgressCard(
+  //                   '🙋 Abordagens (Ofertas)',
+  //                   stats['ofertas'],
+  //                   config['ofertas_abordagens'] ?? config['ofertas'],
+  //                   ' pessoas',
+  //                   Colors.orange,
+  //                 ),
+  //                 _buildProgressCard(
+  //                   '📚 Qtd Vendas',
+  //                   stats['vendas'],
+  //                   config['vendas_qtd'],
+  //                   ' un',
+  //                   Colors.green,
+  //                 ),
+  //                 _buildProgressCard(
+  //                   '💰 Valor Arrecadado',
+  //                   stats['valor'],
+  //                   config['valor_total_vendas'] ?? config['valor_vendas'],
+  //                   ' R\$',
+  //                   Colors.purple,
+  //                   isMoney: true,
+  //                 ),
+  //               ],
+  //             );
+  //           },
+  //         );
+  //       },
+  //     ),
+  //   );
+  // }
+
+  Widget _buildProgressCard(
+    String title,
+    dynamic atualDynamic,
+    dynamic metaDynamic,
+    String unit,
+    Color color, {
+    bool isMoney = false,
   }) {
-    // Calcula a porcentagem (garantindo que não passe de 100% visualmente)
-    double progress = (currentValue / goalValue).clamp(0.0, 1.0);
+    double atual = (atualDynamic ?? 0).toDouble();
+    double meta = (metaDynamic ?? 1).toDouble(); // Evita divisão por zero
+    if (meta == 0) meta = 1;
+
+    double progress = (atual / meta).clamp(0.0, 1.0);
     bool isCompleted = progress >= 1.0;
 
-    String currentDisplay = isCurrency
-        ? 'R\$ ${currentValue.toStringAsFixed(2)}'
-        : currentValue.toInt().toString();
-    String goalDisplay = isCurrency
-        ? 'R\$ ${goalValue.toStringAsFixed(0)}'
-        : goalValue.toInt().toString();
+    String formatadoAtual = isMoney
+        ? atual.toStringAsFixed(2)
+        : atual.toInt().toString();
+    String formatadoMeta = isMoney
+        ? meta.toStringAsFixed(2)
+        : meta.toInt().toString();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: isCompleted
-            ? Border.all(color: color, width: 2)
-            : Border.all(color: Colors.transparent),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 2)),
-        ],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: color, size: 24),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF333333),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      description,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
+              Text(
+                title,
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
                 ),
               ),
               if (isCompleted)
-                Icon(LucideIcons.checkCircle2, color: color, size: 28),
+                Icon(LucideIcons.checkCircle2, color: color, size: 20),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '$currentDisplay de $goalDisplay $unit',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
+                '$formatadoAtual / $formatadoMeta$unit',
+                style: GoogleFonts.inter(color: Colors.grey[700], fontSize: 13),
               ),
               Text(
                 '${(progress * 100).toInt()}%',
                 style: GoogleFonts.inter(
-                  fontSize: 13,
                   fontWeight: FontWeight.bold,
                   color: color,
                 ),
@@ -225,7 +451,7 @@ class DesafiosPage extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           ClipRRect(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(8),
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 10,
@@ -238,3 +464,185 @@ class DesafiosPage extends ConsumerWidget {
     );
   }
 }
+
+// class DesafiosPage extends ConsumerStatefulWidget {
+//   final String uid;
+//   const DesafiosPage({super.key, required this.uid});
+
+//   @override
+//   ConsumerState<DesafiosPage> createState() => _DesafiosPageState();
+// }
+
+// class _DesafiosPageState extends ConsumerState<DesafiosPage> {
+//   YoutubePlayerController? _videoController;
+
+// @override
+// void dispose() {
+//   _videoController?.dispose();
+//   super.dispose();
+// }
+
+// Inicialização segura do player de vídeo
+// void _initVideo(String url) {
+//   if (_videoController != null || url.isEmpty) return;
+
+//   final videoId = YoutubePlayer.convertUrlToId(url);
+//   if (videoId != null) {
+//     // O setState dentro do addPostFrameCallback garante que a interface atualiza após inicializar
+//     WidgetsBinding.instance.addPostFrameCallback((_) {
+//       setState(() {
+//         _videoController = YoutubePlayerController(
+//           initialVideoId: videoId,
+//           flags: const YoutubePlayerFlags(
+//             autoPlay: false,
+//             mute: false,
+//             showLiveFullscreenButton: false,
+//           ),
+//         );
+//       });
+//     });
+//   }
+// }
+
+// @override
+// Widget build(BuildContext context) {
+//   final campaignAsync = ref.watch(campaignSettingsProvider);
+//   final statsAsync = ref.watch(userTotalStatsProvider(widget.uid));
+
+//   return Scaffold(
+//     backgroundColor: const Color(0xFFF5F5F5),
+//     appBar: AppBar(
+//       title: Text(
+//         'Desafios Ativos',
+//         style: GoogleFonts.inter(
+//           fontWeight: FontWeight.bold,
+//           color: Colors.white,
+//         ),
+//       ),
+//       backgroundColor: const Color(0xFF1E3A8A),
+//       iconTheme: const IconThemeData(color: Colors.white),
+//     ),
+//     body: campaignAsync.when(
+//       loading: () => const Center(child: CircularProgressIndicator()),
+//       error: (err, _) =>
+//           const Center(child: Text('Erro ao carregar campanha.')),
+//       data: (config) {
+//         if (config.isEmpty)
+//           return const Center(
+//             child: Text("Nenhum desafio ativo no momento."),
+//           );
+
+//         // Chama a inicialização de forma segura
+//         _initVideo(config['video_url'] ?? '');
+
+//         return statsAsync.when(
+//           loading: () => const Center(child: CircularProgressIndicator()),
+//           error: (err, _) =>
+//               const Center(child: Text('Erro ao carregar seu progresso.')),
+//           data: (stats) {
+//             return ListView(
+//               padding: const EdgeInsets.all(20),
+//               children: [
+//                 // ... (Mantém o teu Container de HEADER DO DESAFIO igual) ...
+//                 Container(
+//                   padding: const EdgeInsets.all(20),
+//                   decoration: BoxDecoration(
+//                     color: const Color(
+//                       0xFFE89A0E,
+//                     ), // Cor baseada na tua imagem
+//                     borderRadius: BorderRadius.circular(12),
+//                   ),
+//                   child: Column(
+//                     crossAxisAlignment: CrossAxisAlignment.start,
+//                     children: [
+//                       Text(
+//                         (config['nome_desafio'] ?? 'OPERAÇÃO RESGATE')
+//                             .toString()
+//                             .toUpperCase(),
+//                         style: GoogleFonts.inter(
+//                           color: Colors.white,
+//                           fontSize: 20,
+//                           fontWeight: FontWeight.w900,
+//                         ),
+//                       ),
+//                       const SizedBox(height: 8),
+//                       Row(
+//                         children: [
+//                           const Icon(
+//                             LucideIcons.gift,
+//                             color: Colors.white,
+//                             size: 20,
+//                           ),
+//                           const SizedBox(width: 8),
+//                           Text(
+//                             'Prêmio: ${config['premio'] ?? 'Jantar'}',
+//                             style: GoogleFonts.inter(
+//                               color: Colors.white,
+//                               fontSize: 16,
+//                             ),
+//                           ),
+//                         ],
+//                       ),
+//                     ],
+//                   ),
+//                 ),
+//                 const SizedBox(height: 24),
+
+//                 // 2. VÍDEO PROMOCIONAL (CORRIGIDO PARA REPRODUÇÃO)
+//                 if (_videoController != null) ...[
+//                   Row(
+//                     children: [
+//                       const Icon(LucideIcons.clapperboard, size: 20),
+//                       const SizedBox(width: 8),
+//                       Text(
+//                         'Missão da Semana',
+//                         style: GoogleFonts.inter(
+//                           fontSize: 18,
+//                           fontWeight: FontWeight.bold,
+//                         ),
+//                       ),
+//                     ],
+//                   ),
+//                   const SizedBox(height: 12),
+//                   Container(
+//                     decoration: BoxDecoration(
+//                       borderRadius: BorderRadius.circular(12),
+//                       border: Border.all(
+//                         color: Colors.red.shade600,
+//                         width: 2,
+//                       ), // Borda vermelha da tua imagem
+//                       boxShadow: const [
+//                         BoxShadow(
+//                           color: Colors.black26,
+//                           blurRadius: 10,
+//                           offset: Offset(0, 5),
+//                         ),
+//                       ],
+//                     ),
+//                     child: ClipRRect(
+//                       borderRadius: BorderRadius.circular(10),
+//                       child: YoutubePlayer(
+//                         controller: _videoController!,
+//                         showVideoProgressIndicator: true,
+//                         progressIndicatorColor: Colors.red,
+//                         progressColors: const ProgressBarColors(
+//                           playedColor: Colors.red,
+//                           handleColor: Colors.redAccent,
+//                         ),
+//                       ),
+//                     ),
+//                   ),
+//                   const SizedBox(height: 24),
+//                 ],
+
+//                 // ... (Mantém as BARRAS DE PROGRESSO iguais) ...
+//               ],
+//             );
+//           },
+//         );
+//       },
+//     ),
+//   );
+// }
+
+// }
