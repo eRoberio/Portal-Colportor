@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:colportportal/application/services/pdf_service.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -24,12 +25,277 @@ class _AdminPageState extends State<AdminPage> {
   final _premioCtrl = TextEditingController();
   final _videoUrlCtrl = TextEditingController();
 
+  DateTime _dataInicio = DateTime(DateTime.now().year, DateTime.now().month, 1);
+  DateTime _dataFim = DateTime.now();
+  String _tipoRelatorio = 'geral'; // geral, categoria, individual
+  String _categoriaSelecionada = 'estudante';
+  String? _usuarioSelecionado;
+  List<Map<String, dynamic>> _listaUsuariosCache = [];
+
+  bool _isGeneratingPdf = false;
+
   bool _isLoadingMetas = false;
 
   @override
   void initState() {
     super.initState();
     _carregarMetasAtuais();
+  }
+
+  void _abrirAssistenteExportacao() async {
+    // Carrega os utilizadores rapidamente para o dropdown (se for escolher individual)
+    if (_listaUsuariosCache.isEmpty) {
+      final snap = await FirebaseFirestore.instance.collection('users').get();
+      _listaUsuariosCache = snap.docs
+          .map((d) => {'id': d.id, ...d.data()})
+          .toList();
+    }
+
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+                left: 24,
+                right: 24,
+                top: 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '📄 Exportar Relatório',
+                    style: GoogleFonts.inter(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // 1. ESCOLHA DO PERÍODO
+                  Text(
+                    'Período:',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                  ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(
+                      LucideIcons.calendar,
+                      color: Color(0xFF1E3A8A),
+                    ),
+                    title: Text(
+                      '${_dataInicio.day}/${_dataInicio.month}/${_dataInicio.year} até ${_dataFim.day}/${_dataFim.month}/${_dataFim.year}',
+                    ),
+                    trailing: const Icon(LucideIcons.edit2, size: 18),
+                    onTap: () async {
+                      final picked = await showDateRangePicker(
+                        context: context,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime.now(),
+                        initialDateRange: DateTimeRange(
+                          start: _dataInicio,
+                          end: _dataFim,
+                        ),
+                      );
+                      if (picked != null) {
+                        setModalState(() {
+                          _dataInicio = picked.start;
+                          _dataFim = picked.end;
+                        });
+                      }
+                    },
+                  ),
+                  const Divider(),
+
+                  // 2. ESCOLHA DO TIPO
+                  Text(
+                    'Tipo de Relatório:',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                  ),
+                  DropdownButton<String>(
+                    isExpanded: true,
+                    value: _tipoRelatorio,
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'geral',
+                        child: Text('Geral (Toda a Equipa)'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'categoria',
+                        child: Text('Por Categoria (Efetivos/Estudantes)'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'individual',
+                        child: Text('Individual (Por Colportor)'),
+                      ),
+                    ],
+                    onChanged: (val) =>
+                        setModalState(() => _tipoRelatorio = val!),
+                  ),
+
+                  // 3. FILTROS CONDICIONAIS
+                  if (_tipoRelatorio == 'categoria') ...[
+                    const SizedBox(height: 10),
+                    DropdownButton<String>(
+                      isExpanded: true,
+                      value: _categoriaSelecionada,
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'estudante',
+                          child: Text('🎓 Estudantes'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'efetivo',
+                          child: Text('👥 Efetivos'),
+                        ),
+                      ],
+                      onChanged: (val) =>
+                          setModalState(() => _categoriaSelecionada = val!),
+                    ),
+                  ],
+
+                  if (_tipoRelatorio == 'individual') ...[
+                    const SizedBox(height: 10),
+                    DropdownButton<String>(
+                      isExpanded: true,
+                      hint: const Text('Selecione o Colportor'),
+                      value: _usuarioSelecionado,
+                      items: _listaUsuariosCache
+                          .map(
+                            (u) => DropdownMenuItem<String>(
+                              value: u['id'],
+                              child: Text(u['nome'] ?? 'Sem nome'),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (val) =>
+                          setModalState(() => _usuarioSelecionado = val),
+                    ),
+                  ],
+
+                  const SizedBox(height: 30),
+
+                  // BOTÃO GERAR
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      icon: const Icon(
+                        LucideIcons.fileOutput,
+                        color: Colors.white,
+                      ),
+                      label: Text(
+                        'GERAR PDF AGORA',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF10B981),
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context); // Fecha o modal
+                        _gerarEExportarPDF(); // Roda a tua função de PDF atualizada!
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _gerarEExportarPDF() async {
+    setState(() => _isGeneratingPdf = true);
+    try {
+      // 1. Prepara a Query baseada no PERÍODO
+      // Adicionamos 1 dia na dataFim para garantir que pega os relatórios enviados até às 23:59 do último dia
+      Query query = FirebaseFirestore.instance
+          .collection('reports')
+          .where('data_envio', isGreaterThanOrEqualTo: _dataInicio)
+          .where(
+            'data_envio',
+            isLessThanOrEqualTo: _dataFim.add(const Duration(days: 1)),
+          );
+
+      // 2. Aplica o filtro de TIPO (Categoria ou Individual) no Firebase
+      if (_tipoRelatorio == 'categoria') {
+        query = query.where('categoria', isEqualTo: _categoriaSelecionada);
+      } else if (_tipoRelatorio == 'individual' &&
+          _usuarioSelecionado != null) {
+        query = query.where('uid', isEqualTo: _usuarioSelecionado);
+      }
+
+      final reportsSnap = await query.get();
+      final relatorios = reportsSnap.docs
+          .map((d) => d.data() as Map<String, dynamic>)
+          .toList();
+
+      if (relatorios.isEmpty) {
+        if (mounted)
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Nenhum relatório encontrado para este filtro.'),
+            ),
+          );
+        setState(() => _isGeneratingPdf = false);
+        return;
+      }
+
+      // 3. Monta o Mapa de Utilizadores (para dar os nomes aos IDs)
+      final usersSnap = await FirebaseFirestore.instance
+          .collection('users')
+          .get();
+      Map<String, dynamic> usersMap = {
+        for (var doc in usersSnap.docs) doc.id: doc.data(),
+      };
+
+      // 4. Define o Título dinâmico para o PDF
+      String tituloPdf = 'RELATÓRIO ADMINISTRATIVO';
+      String nomeArquivo = 'RELATORIO_CONSOLIDADO'; // Nome padrão
+      if (_tipoRelatorio == 'categoria') {
+        tituloPdf += ' (${_categoriaSelecionada.toUpperCase()})';
+        nomeArquivo = 'RELATORIO_${_categoriaSelecionada.toUpperCase()}';
+      } else if (_tipoRelatorio == 'individual' &&
+          _usuarioSelecionado != null) {
+        String nomeColportor =
+            usersMap[_usuarioSelecionado]?['nome'] ?? 'COLPORTOR';
+
+        // Coloca em CAIXA ALTA e troca espaços por sublinhados para o nome do arquivo
+        nomeArquivo = nomeColportor.toUpperCase().replaceAll(' ', '_');
+        tituloPdf += ' - $nomeColportor';
+      }
+
+      // 5. Chama o serviço com o novo parâmetro nomeArquivo
+      await PdfService.gerarRelatorioAdmin(
+        relatorios: relatorios,
+        usuariosMap: usersMap,
+        tituloCustomizado: tituloPdf,
+        periodo:
+            '${_dataInicio.day}/${_dataInicio.month}/${_dataInicio.year} a ${_dataFim.day}/${_dataFim.month}/${_dataFim.year}',
+        nomeArquivo: nomeArquivo, // <-- Enviando o nome formatado
+      );
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Erro: $e')));
+    }
+    setState(() => _isGeneratingPdf = false);
   }
 
   Future<void> _carregarMetasAtuais() async {
@@ -262,7 +528,44 @@ class _AdminPageState extends State<AdminPage> {
             const SizedBox(height: 32),
             const Divider(),
             const SizedBox(height: 24),
-
+            // ==========================================
+            // EXPORTAÇÃO DE RELATÓRIOS
+            // ==========================================
+            Text(
+              '📊 Relatórios Administrativos',
+              style: GoogleFonts.inter(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: _isGeneratingPdf
+                  ? const Center(child: CircularProgressIndicator())
+                  : ElevatedButton.icon(
+                      onPressed: _abrirAssistenteExportacao,
+                      icon: const Icon(
+                        LucideIcons.fileOutput,
+                        color: Colors.white,
+                      ),
+                      label: Text(
+                        'Exportar Consolidação Mensal (PDF)',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1E3A8A),
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+            ),
+            const SizedBox(height: 32),
+            const Divider(),
+            const SizedBox(height: 24),
             // ==========================================
             // 3. CÓDIGOS DE ACESSO (Igual ao seu)
             // ==========================================
@@ -325,15 +628,50 @@ class _AdminPageState extends State<AdminPage> {
                             letterSpacing: 2,
                           ),
                         ),
-                        trailing: IconButton(
-                          icon: const Icon(
-                            LucideIcons.trash2,
-                            color: Colors.redAccent,
-                          ),
-                          onPressed: () => FirebaseFirestore.instance
-                              .collection('invite_codes')
-                              .doc(code)
-                              .delete(),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize
+                              .min, // Garante que a Row não ocupe a linha toda
+                          children: [
+                            // 1. BOTÃO DE COPIAR
+                            IconButton(
+                              icon: const Icon(
+                                LucideIcons.copy,
+                                color: Color(0xFF1E3A8A),
+                              ),
+                              onPressed: () async {
+                                // Texto formatado com o código da lista
+                                final textoParaCopiar =
+                                    "Olá! Segue o código de convite de uso exclusivo para acesso ao Sistema de Colportagem.🔑 Código: *D7AG9H* Por favor, insira este código na tela de registro do aplicativo.";
+                                // Copia para a área de transferência do telemóvel/computador
+                                await Clipboard.setData(
+                                  ClipboardData(text: textoParaCopiar),
+                                );
+
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Copiado para a área de transferência!',
+                                      ),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                }
+                              },
+                            ),
+
+                            // 2. BOTÃO DE EXCLUIR (O que já tinhas)
+                            IconButton(
+                              icon: const Icon(
+                                LucideIcons.trash2,
+                                color: Colors.redAccent,
+                              ),
+                              onPressed: () => FirebaseFirestore.instance
+                                  .collection('invite_codes')
+                                  .doc(code)
+                                  .delete(),
+                            ),
+                          ],
                         ),
                       ),
                     );

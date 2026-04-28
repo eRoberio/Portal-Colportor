@@ -43,6 +43,8 @@ dependencies:
   google_fonts: ^6.2.1
   lucide_icons: ^0.257.0  # <--- Versão corrigida aqui!
   intl: ^0.19.0
+  pdf: ^3.10.8
+  printing: ^5.11.1
   
   # Utilidades
   shared_preferences: ^2.3.2

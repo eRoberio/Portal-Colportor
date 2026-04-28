@@ -808,53 +808,44 @@ class _HomePageState extends ConsumerState<HomePage> {
                             );
                           }
 
-                          // Acha os campeões
+                         // Acha os campeões com proteção total contra valores Null
                           Map<String, dynamic>? topHoras, topOfertas, topLivros;
+                          
                           for (var stats in filteredList) {
-                            if (topHoras == null ||
-                                stats['horas'] > topHoras['horas'])
-                              topHoras = stats;
-                            if (topOfertas == null ||
-                                stats['ofertas'] > topOfertas['ofertas'])
-                              topOfertas = stats;
-                            if (topLivros == null ||
-                                stats['livros'] > topLivros['livros'])
-                              topLivros = stats;
+                            final double horas = (stats['horas'] ?? 0.0).toDouble();
+                            final int ofertas = (stats['ofertas'] ?? 0).toInt();
+                            final int vendas = (stats['vendas'] ?? 0).toInt();
+
+                            if (topHoras == null || horas > (topHoras['horas'] ?? 0.0).toDouble()) topHoras = stats;
+                            if (topOfertas == null || ofertas > (topOfertas['ofertas'] ?? 0).toInt()) topOfertas = stats;
+                            if (topLivros == null || vendas > (topLivros['vendas'] ?? 0).toInt()) topLivros = stats;
                           }
 
                           return Column(
                             children: [
-                              if (topHoras != null && topHoras['horas'] > 0)
+                              if (topHoras != null && (topHoras['horas'] ?? 0.0).toDouble() > 0)
                                 _buildChampionCard(
-                                  title: '⏰ Horas Missionárias',
-                                  icon: '📚',
-                                  name:
-                                      users[topHoras['uid']]?['nome'] ??
-                                      'Colportor',
-                                  score: '${topHoras['horas']}h',
-                                  isGold: true,
+                                  title: '⏰ Horas Missionárias', 
+                                  icon: '📚', 
+                                  name: users[topHoras['uid']]?['nome'] ?? 'Colportor', 
+                                  score: '${(topHoras['horas'] ?? 0.0).toDouble().toStringAsFixed(1)}h', 
+                                  isGold: true
                                 ),
-                              if (topOfertas != null &&
-                                  topOfertas['ofertas'] > 0)
+                              if (topOfertas != null && (topOfertas['ofertas'] ?? 0).toInt() > 0)
                                 _buildChampionCard(
-                                  title: '💰 Ofertas',
-                                  icon: '💰',
-                                  name:
-                                      users[topOfertas['uid']]?['nome'] ??
-                                      'Colportor',
-                                  score:
-                                      'R\$ ${(topOfertas['ofertas'] as num).toDouble().toStringAsFixed(2).replaceAll('.', ',')}',
-                                  isGold: false,
+                                  title: '🙋 Abordagens', 
+                                  icon: '🙋', 
+                                  name: users[topOfertas['uid']]?['nome'] ?? 'Colportor', 
+                                  score: '${(topOfertas['ofertas'] ?? 0).toInt()}', 
+                                  isGold: false
                                 ),
-                              if (topLivros != null && topLivros['livros'] > 0)
+                              if (topLivros != null && (topLivros['vendas'] ?? 0).toInt() > 0)
                                 _buildChampionCard(
-                                  title: '💼 Livros',
-                                  icon: '💼',
-                                  name:
-                                      users[topLivros['uid']]?['nome'] ??
-                                      'Colportor',
-                                  score: '${topLivros['livros']} un',
-                                  isGold: false,
+                                  title: '💼 Vendas', 
+                                  icon: '💼', 
+                                  name: users[topLivros['uid']]?['nome'] ?? 'Colportor', 
+                                  score: '${(topLivros['vendas'] ?? 0).toInt()} un', 
+                                  isGold: false
                                 ),
                             ],
                           );

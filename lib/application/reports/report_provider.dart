@@ -71,7 +71,7 @@ final campaignSettingsProvider = StreamProvider<Map<String, dynamic>>((ref) {
 });
 
 // Provedor de Estatísticas Individuais (Ajustado para a nova especificação)
-// Provedor para as estatísticas que alimentam os Desafios
+// Provedor para as estatísticas que alimentam os Desafios// 4. Provedor de Estatísticas Totais do Usuário
 final userTotalStatsProvider =
     StreamProvider.family<Map<String, dynamic>, String>((ref, uid) {
       return FirebaseFirestore.instance
@@ -80,24 +80,30 @@ final userTotalStatsProvider =
           .snapshots()
           .map((snap) {
             double horas = 0, valor = 0;
-            int vendas = 0, ofertas = 0;
+            int vendas = 0,
+                ofertas = 0,
+                interessados = 0,
+                batismos = 0; // <-- Adicionados aqui!
 
             for (var doc in snap.docs) {
               final d = doc.data();
-              // Use .toDouble() ou .toInt() para evitar erro de 'num'
               horas += (d['horas_missionarias'] ?? 0).toDouble();
               valor += (d['valor_vendas'] ?? 0).toDouble();
               vendas += ((d['vendas_qtd'] ?? 0) as num).toInt();
               ofertas += ((d['ofertas_abordagens'] ?? 0) as num).toInt();
-              // visitas += ((d['visitas'] ?? 0) as num).toInt();
-              // interessados += ((d['interessados'] ?? 0) as num).toInt();
-              // batismos += ((d['batismos'] ?? 0) as num).toInt();
+
+              // <-- Somando os novos campos do relatório!
+              interessados += ((d['interessados'] ?? 0) as num).toInt();
+              batismos += ((d['batismos'] ?? 0) as num).toInt();
             }
+
             return {
               'horas': horas,
               'valor': valor,
               'vendas': vendas,
               'ofertas': ofertas,
+              'interessados': interessados, // <-- Passando para a tela
+              'batismos': batismos, // <-- Passando para a tela
             };
           });
     });
@@ -117,38 +123,33 @@ final allUsersProvider = StreamProvider<Map<String, dynamic>>((ref) {
 // =========================================================================
 // 6. Provedor dos Campeões do Dia (Retorna a lista bruta somada de hoje)
 // =========================================================================
+// 5. Campeões de Hoje
 final todaysChampionsProvider = StreamProvider<List<Map<String, dynamic>>>((
   ref,
 ) {
   final now = DateTime.now();
-  final startOfToday = DateTime(now.year, now.month, now.day);
-
+  final inicioHoje = DateTime(now.year, now.month, now.day);
   return FirebaseFirestore.instance
       .collection('reports')
-      .where('data_envio', isGreaterThanOrEqualTo: startOfToday)
+      .where('data_envio', isGreaterThanOrEqualTo: inicioHoje)
       .snapshots()
-      .map((snapshot) {
-        final userStats = <String, Map<String, dynamic>>{};
+      .map((snap) {
+        final stats = <String, Map<String, dynamic>>{};
+        for (var doc in snap.docs) {
+          final d = doc.data();
+          final uid = d['uid'];
+          if (uid == null) continue; // Ignora se vier sem ID
 
-        for (var doc in snapshot.docs) {
-          final data = doc.data();
-          final uid = data['uid'] as String;
-
-          if (!userStats.containsKey(uid)) {
-            userStats[uid] = {
-              'uid': uid,
-              'horas': 0.0,
-              'ofertas': 0.0,
-              'livros': 0,
-            };
+          if (!stats.containsKey(uid)) {
+            stats[uid] = {'uid': uid, 'horas': 0.0, 'vendas': 0, 'ofertas': 0};
           }
 
-          userStats[uid]!['horas'] += (data['horas'] ?? 0.0).toDouble();
-          userStats[uid]!['ofertas'] += (data['ofertas'] ?? 0.0).toDouble();
-          userStats[uid]!['livros'] += (data['livros'] ?? 0).toInt();
+          // Usa os nomes da nova especificação
+          stats[uid]!['horas'] += (d['horas_missionarias'] ?? 0).toDouble();
+          stats[uid]!['vendas'] += (d['vendas_qtd'] ?? 0).toInt();
+          stats[uid]!['ofertas'] += (d['ofertas_abordagens'] ?? 0).toInt();
         }
-
-        return userStats.values.toList();
+        return stats.values.toList();
       });
 });
 // =========================================================================
