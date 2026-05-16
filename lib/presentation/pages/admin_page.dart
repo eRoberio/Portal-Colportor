@@ -466,7 +466,7 @@ class _AdminPageState extends State<AdminPage> {
                     children: [
                       Expanded(
                         child: _buildTextField(
-                          '⏰ Horas Missionárias',
+                          '⏰ Horas Trabalhadas',
                           _metaHorasCtrl,
                         ),
                       ),
@@ -484,7 +484,7 @@ class _AdminPageState extends State<AdminPage> {
                     children: [
                       Expanded(
                         child: _buildTextField(
-                          '🙋 Ofertas (Abordagens)',
+                          '🙋 Ofertas',
                           _metaOfertasCtrl,
                         ),
                       ),

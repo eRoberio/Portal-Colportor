@@ -25,6 +25,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _phoneController = TextEditingController();
   final _motivationController = TextEditingController();
 
+  bool _passwordVisibleLogin = false;
+  bool _passwordVisibleRegister = false;
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -159,7 +162,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           label: 'Senha',
           hint: 'Digite sua senha',
           controller: _passwordController,
-          obscureText: true,
+          obscureText: !_passwordVisibleLogin,
+          isPassword: true,
+          onToggleVisibility: () {
+            setState(() {
+              _passwordVisibleLogin = !_passwordVisibleLogin;
+            });
+          },
+          passwordVisible: _passwordVisibleLogin,
         ),
         const SizedBox(height: 24),
 
@@ -253,7 +263,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           label: 'Senha *',
           hint: 'Mínimo 6 caracteres',
           controller: _passwordController,
-          obscureText: true,
+          obscureText: !_passwordVisibleRegister,
+          isPassword: true,
+          onToggleVisibility: () {
+            setState(() {
+              _passwordVisibleRegister = !_passwordVisibleRegister;
+            });
+          },
+          passwordVisible: _passwordVisibleRegister,
         ),
         const SizedBox(height: 16),
         _buildTextField(
@@ -356,6 +373,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     bool obscureText = false,
     TextInputType keyboardType = TextInputType.text,
     int maxLines = 1,
+    bool isPassword = false,
+    VoidCallback? onToggleVisibility,
+    bool passwordVisible = false,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -390,6 +410,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(color: Color(0xFF1E3A8A), width: 2),
             ),
+            suffixIcon: isPassword
+                ? IconButton(
+                    icon: Icon(
+                      passwordVisible ? Icons.visibility : Icons.visibility_off,
+                    ),
+                    onPressed: onToggleVisibility,
+                  )
+                : null,
           ),
         ),
       ],

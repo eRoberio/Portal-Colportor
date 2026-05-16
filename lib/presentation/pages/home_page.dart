@@ -1,36 +1,20 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../application/auth/auth_provider.dart';
-import 'account_settings_page.dart'; // Corrigido: importando a tela
-import 'admin_page.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../application/providers/verse_provider.dart';
-import 'novo_relatorio_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../application/reports/report_provider.dart';
-import 'desafios_page.dart';
-import 'rankings_page.dart';
-import 'dart:math';
-import '../../constants/egw_database.dart';
-
-import 'rankings_page.dart';
-
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+
 import '../../application/auth/auth_provider.dart';
 import '../../application/reports/report_provider.dart';
 import '../../constants/egw_database.dart';
+import 'account_settings_page.dart';
+import 'admin_page.dart';
 import 'novo_relatorio_page.dart';
 import 'desafios_page.dart';
-import 'admin_page.dart';
+import 'rankings_page.dart'; // Importação limpa e corrigida!
 
-// final dashboardTabProvider = StateProvider<String>((ref) => 'estudante');
-
-// 3. Troque StatefulWidget por ConsumerStatefulWidget
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
 
@@ -38,15 +22,11 @@ class HomePage extends ConsumerStatefulWidget {
   ConsumerState<HomePage> createState() => _HomePageState();
 }
 
-// 4. Troque State por ConsumerState
 class _HomePageState extends ConsumerState<HomePage> {
   int _currentIndex = 0;
-  String _dashboardTab = 'efetivos';
-  String _abaAtual =
-      'estudante'; // Controla se estamos vendo Efetivos ou Estudantes
+  String _abaAtual = 'estudante';
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  // Função que abre a galeria e envia a foto
   Future<void> _pickAndUploadImage(String uid) async {
     final picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
@@ -75,14 +55,12 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    // 5. Assista ao perfil do usuário atual em tempo real!
     final userProfileAsync = ref.watch(currentUserProfileProvider);
 
     return Scaffold(
-      key: _scaffoldKey, // <-- 1. CHAVE ATRIBUÍDA AQUI
+      key: _scaffoldKey,
       backgroundColor: const Color(0xFFF5F5F5),
 
-      // 2. DRAWER SEMPRE GARANTIDO (mostra carregando se precisar)
       drawer: userProfileAsync.when(
         data: (profile) {
           if (profile != null) return _buildDrawer(context, profile);
@@ -112,7 +90,6 @@ class _HomePageState extends ConsumerState<HomePage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // 3. BOTÃO SIMPLIFICADO USANDO A CHAVE GLOBAL
                   IconButton(
                     icon: const Icon(
                       LucideIcons.menu,
@@ -120,13 +97,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                       size: 28,
                     ),
                     padding: EdgeInsets.zero,
-                    onPressed: () {
-                      // Abre o menu com segurança usando a chave
-                      _scaffoldKey.currentState?.openDrawer();
-                    },
+                    onPressed: () => _scaffoldKey.currentState?.openDrawer(),
                   ),
-                  const SizedBox(width: 8),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -151,14 +124,10 @@ class _HomePageState extends ConsumerState<HomePage> {
                         ),
                         const SizedBox(height: 8),
 
-                        // 6. RENDERIZAÇÃO DINÂMICA DO NOME E CARGO
                         userProfileAsync.when(
                           data: (profile) {
                             if (profile == null) return const SizedBox.shrink();
-
-                            // Pega o nome do banco de dados (Firestore)
                             final nome = profile['nome'] ?? 'Usuário';
-                            // Formata o cargo bonitinho
                             final role = profile['role'] == 'admin'
                                 ? 'Admin'
                                 : 'Colportor';
@@ -175,7 +144,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Text(
-                                  '$nome • $role', // Usa as variáveis reais aqui!
+                                  '$nome • $role',
                                   style: GoogleFonts.inter(
                                     fontSize: 12,
                                     color: Colors.white,
@@ -189,7 +158,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                             color: Colors.white,
                           ),
                           error: (e, _) => Text(
-                            'Erro ao carregar dados',
+                            'Erro ao carregar',
                             style: GoogleFonts.inter(color: Colors.white),
                           ),
                         ),
@@ -198,10 +167,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                   ),
                   IconButton(
                     icon: const Icon(LucideIcons.logOut, color: Colors.white),
-                    onPressed: () {
-                      // 7. LIGA O BOTÃO DE LOGOUT AO FIREBASE
-                      ref.read(authControllerProvider.notifier).signOut();
-                    },
+                    onPressed: () =>
+                        ref.read(authControllerProvider.notifier).signOut(),
                   ),
                 ],
               ),
@@ -209,8 +176,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           ),
         ),
       ),
-      // ... O RESTO DO CÓDIGO (BottomNavigationBar, e as outras funções) CONTINUA IGUAL!1
-      // CORPO DA TELA
+
       body: userProfileAsync.when(
         data: _buildBodyContent,
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -218,14 +184,9 @@ class _HomePageState extends ConsumerState<HomePage> {
             const Center(child: Text('Erro ao carregar tela principal')),
       ),
 
-      // BARRA DE NAVEGAÇÃO INFERIOR
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
+        onTap: (index) => setState(() => _currentIndex = index),
         type: BottomNavigationBarType.fixed,
         selectedItemColor: const Color(0xFF1E3A8A),
         unselectedItemColor: Colors.grey[600],
@@ -259,20 +220,17 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  // ==========================================
-  // FUNÇÃO PARA SALVAR A DATA DE NASCIMENTO
-  // ==========================================
   Future<void> _selecionarDataNascimento(String uid) async {
     final DateTime? dataEscolhida = await showDatePicker(
       context: context,
-      initialDate: DateTime(2000, 1, 1), // Data inicial padrão
+      initialDate: DateTime(2000, 1, 1),
       firstDate: DateTime(1940),
       lastDate: DateTime.now(),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF1E3A8A), // Cor do cabeçalho
+              primary: Color(0xFF1E3A8A),
               onPrimary: Colors.white,
               onSurface: Colors.black87,
             ),
@@ -283,7 +241,6 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
 
     if (dataEscolhida != null) {
-      // Salva no banco de dados separando o mês para facilitar buscas futuras
       await FirebaseFirestore.instance.collection('users').doc(uid).update({
         'data_nascimento': dataEscolhida.toIso8601String(),
         'dia_nascimento': dataEscolhida.day,
@@ -301,7 +258,6 @@ class _HomePageState extends ConsumerState<HomePage> {
     }
   }
 
-  // Define qual aba central renderizar baseada no BottomNavigationBar
   Widget _buildBodyContent(Map<String, dynamic>? profile) {
     switch (_currentIndex) {
       case 0:
@@ -311,24 +267,21 @@ class _HomePageState extends ConsumerState<HomePage> {
       case 2:
         return _buildAniversariosTab(profile);
       case 3:
-        return _buildMotivacaoTab(); // <--- MUDOU AQUI!
+        return _buildMotivacaoTab();
       default:
         return const SizedBox.shrink();
     }
   }
-  // ==========================================
-  // ABA INÍCIO (DASHBOARD PRINCIPAL)
-  // ==========================================
 
+  // ==========================================
+  // ABA INÍCIO
+  // ==========================================
   Widget _buildInicioTab(Map<String, dynamic>? profile) {
-    // Validações
     final isAdmin = profile?['role'] == 'admin';
     final uid = profile?['id'];
-
     final fotoUrl = profile?['fotoUrl'];
     final needsPhoto = fotoUrl == null || fotoUrl.toString().isEmpty;
 
-    // Observadores Riverpod
     final inspiration = ref.watch(dailyInspirationProvider);
     final totalStatsAsync = uid != null
         ? ref.watch(userTotalStatsProvider(uid))
@@ -341,7 +294,6 @@ class _HomePageState extends ConsumerState<HomePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. BANNER DE FOTO
           if (needsPhoto && uid != null)
             Container(
               margin: const EdgeInsets.only(bottom: 24),
@@ -384,9 +336,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton(
-                    onPressed: () => _selecionarDataNascimento(
-                      uid,
-                    ), // ou _pickAndUploadImage
+                    onPressed: () => _selecionarDataNascimento(uid),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red.shade600,
                       foregroundColor: Colors.white,
@@ -400,7 +350,6 @@ class _HomePageState extends ConsumerState<HomePage> {
               ),
             ),
 
-          // 2. CAIXA DE MOTIVAÇÃO (Bíblia / E.G.W)
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(20),
@@ -411,7 +360,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF1E3A8A).withValues(alpha: 0.2),
+                  color: const Color(0xFF1E3A8A).withOpacity(0.2),
                   blurRadius: 15,
                   offset: const Offset(0, 4),
                 ),
@@ -435,7 +384,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                   style: GoogleFonts.inter(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white.withValues(alpha: 0.9),
+                    color: Colors.white.withOpacity(0.9),
                   ),
                 ),
               ],
@@ -443,7 +392,6 @@ class _HomePageState extends ConsumerState<HomePage> {
           ),
           const SizedBox(height: 24),
 
-          // 3. AÇÕES RÁPIDAS
           Text(
             '🚀 Ações Rápidas',
             style: GoogleFonts.inter(
@@ -511,21 +459,49 @@ class _HomePageState extends ConsumerState<HomePage> {
           const SizedBox(height: 24),
 
           // ===========================
-          // 4. CAMPEÕES DE HOJE (Visão Isolada)
+          // CARROSSEL NEON: DESTAQUE DO DIA
           // ===========================
-          // Text(
-          //   '🏆 Campeões de Hoje',
-          //   style: GoogleFonts.inter(
-          //     fontSize: 20,
-          //     fontWeight: FontWeight.bold,
-          //     color: const Color(0xFF333333),
-          //   ),
-          // ),
-          // const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Icon(LucideIcons.trophy, color: Color(0xFFF59E0B)),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Destaque de Hoje',
+                    style: GoogleFonts.inter(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF333333),
+                    ),
+                  ),
+                ],
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => RankingsPage(
+                        isAdmin: isAdmin,
+                        minhaCategoria: profile?['categoria'] ?? 'estudante',
+                      ),
+                    ),
+                  );
+                },
+                child: Text(
+                  'Ver Ranking',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF1E3A8A),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
 
-          // LÓGICA DE PERFIL:
-          // Se for Admin, ele controla a visão pelos botões (_abaAtual).
-          // Se for Colportor comum, a tela trava na categoria dele.
           Builder(
             builder: (context) {
               final minhaCategoria = profile?['categoria'] ?? 'estudante';
@@ -533,322 +509,141 @@ class _HomePageState extends ConsumerState<HomePage> {
 
               return Column(
                 children: [
-                  // OS BOTÕES SÓ APARECEM SE O USUÁRIO FOR ADMIN (O LÍDER GERAL)
-                  // if (isAdmin) ...[
-                  //   Row(
-                  //     children: [
-                  //       Expanded(
-                  //         child: _buildTabButton('👥 Efetivos', 'efetivo'),
-                  //       ),
-                  //       const SizedBox(width: 8),
-                  //       Expanded(
-                  //         child: _buildTabButton('🎓 Estudantes', 'estudante'),
-                  //       ),
-                  //     ],
-                  //   ),
-                  //   const SizedBox(height: 16),
-                  // ],
-                  // ===========================
-                  // 4. CAMPEÕES DE HOJE (Visão Isolada)
-                  // ===========================
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(
-                            LucideIcons.trophy,
-                            color: Color(0xFFF59E0B),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Campeões de Hoje',
-                            style: GoogleFonts.inter(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF333333),
-                            ),
-                          ),
-                        ],
-                      ),
-                      // Botão VER MAIS que leva aos Rankings Completos
-                      TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => RankingsPage(
-                                isAdmin: isAdmin,
-                                minhaCategoria:
-                                    profile?['categoria'] ?? 'estudante',
-                              ),
-                            ),
-                          );
-                        },
-                        child: Text(
-                          'Ver mais',
-                          style: GoogleFonts.inter(
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF1E3A8A),
-                          ),
+                  if (isAdmin) ...[
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildTabButton('👥 Efetivos', 'efetivo'),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-
-                  // LÓGICA DE PERFIL (Mantém a tua lógica de filtro)
-                  Builder(
-                    builder: (context) {
-                      final minhaCategoria =
-                          profile?['categoria'] ?? 'estudante';
-                      final categoriaParaExibir = isAdmin
-                          ? _abaAtual
-                          : minhaCategoria;
-
-                      return Column(
-                        children: [
-                          if (isAdmin) ...[
-                            // Container para simular o contorno vermelho (opcional) que mostraste na imagem
-                            // Container(
-                            //   padding: const EdgeInsets.all(8),
-                            //   decoration: BoxDecoration(
-                            //     border: Border.all(
-                            //       color: Colors.red.shade600,
-                            //       width: 2,
-                            //     ), // Remove se não quiseres o quadrado vermelho do print
-                            //     borderRadius: BorderRadius.circular(12),
-                            //   ),
-                            //   child:
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildTabButton(
-                                    '👥 Efetivos',
-                                    'efetivo',
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: _buildTabButton(
-                                    '🎓 Estudantes',
-                                    'estudante',
-                                  ),
-                                ),
-                              ],
-                            ),
-                            // ),
-                            const SizedBox(height: 16),
-                          ],
-
-                          championsAsync.when(
-                            loading: () => const Center(
-                              child: CircularProgressIndicator(),
-                            ),
-                            error: (err, stack) =>
-                                const Text('Erro ao carregar.'),
-                            data: (todaysList) {
-                              return usersMapAsync.when(
-                                loading: () => const SizedBox.shrink(),
-                                error: (err, stack) => const SizedBox.shrink(),
-                                data: (users) {
-                                  final filteredList = todaysList.where((
-                                    stats,
-                                  ) {
-                                    final userCategoria =
-                                        users[stats['uid']]?['categoria'] ??
-                                        'estudante';
-                                    return userCategoria == categoriaParaExibir;
-                                  }).toList();
-
-                                  if (filteredList.isEmpty) {
-                                    return Center(
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 20,
-                                        ),
-                                        child: Text(
-                                          'Nenhum relatório submetido hoje para ${categoriaParaExibir == 'efetivo' ? 'Efetivos' : 'Estudantes'}.',
-                                          style: GoogleFonts.inter(
-                                            color: Colors.grey[600],
-                                            fontStyle: FontStyle.italic,
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  }
-
-                                  Map<String, dynamic>? topHoras,
-                                      topOfertas,
-                                      topLivros;
-                                  for (var stats in filteredList) {
-                                    if (topHoras == null ||
-                                        (stats['horas'] ?? 0) >
-                                            topHoras['horas'])
-                                      topHoras = stats;
-                                    if (topOfertas == null ||
-                                        (stats['ofertas'] ?? 0) >
-                                            topOfertas['ofertas'])
-                                      topOfertas = stats;
-                                    if (topLivros == null ||
-                                        (stats['vendas'] ?? 0) >
-                                            topLivros['vendas'])
-                                      topLivros = stats;
-                                  }
-
-                                  return Column(
-                                    children: [
-                                      // Proteção adicionada para extrair o nome de forma segura
-                                      if (topHoras != null &&
-                                          (topHoras['horas'] ?? 0) > 0)
-                                        _buildChampionCard(
-                                          title: '⏰ Horas Missionárias',
-                                          icon: '📚',
-                                          name:
-                                              users[topHoras['uid']]?['nome'] ??
-                                              'Colportor Anónimo',
-                                          score:
-                                              '${topHoras['horas'].toStringAsFixed(1)}h',
-                                          isGold: true,
-                                        ),
-                                      if (topOfertas != null &&
-                                          (topOfertas['ofertas'] ?? 0) > 0)
-                                        _buildChampionCard(
-                                          title: '🙋 Abordagens (Ofertas)',
-                                          icon: '🙋',
-                                          name:
-                                              users[topOfertas['uid']]?['nome'] ??
-                                              'Colportor Anónimo',
-                                          score: '${topOfertas['ofertas']}',
-                                          isGold: false,
-                                        ),
-                                      if (topLivros != null &&
-                                          (topLivros['vendas'] ?? 0) > 0)
-                                        _buildChampionCard(
-                                          title: '💼 Livros/Revistas',
-                                          icon: '💼',
-                                          name:
-                                              users[topLivros['uid']]?['nome'] ??
-                                              'Colportor Anónimo',
-                                          score: '${topLivros['vendas']} un',
-                                          isGold: false,
-                                        ),
-                                    ],
-                                  );
-                                },
-                              );
-                            },
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 24),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _buildTabButton('🎓 Estudantes', 'estudante'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                  ],
 
                   championsAsync.when(
-                    loading: () => const Padding(
-                      padding: EdgeInsets.all(20),
-                      child: Center(child: CircularProgressIndicator()),
+                    loading: () => const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(20),
+                        child: CircularProgressIndicator(),
+                      ),
                     ),
-                    error: (err, stack) => Text(
-                      'Erro ao carregar campeões.',
-                      style: GoogleFonts.inter(color: Colors.red),
-                    ),
+                    error: (err, stack) =>
+                        const Text('Erro ao carregar campeões.'),
                     data: (todaysList) {
                       return usersMapAsync.when(
                         loading: () => const SizedBox.shrink(),
                         error: (err, stack) => const SizedBox.shrink(),
                         data: (users) {
-                          // Filtra a lista usando nossa variável inteligente!
                           final filteredList = todaysList.where((stats) {
-                            final userId = stats['uid'];
                             final userCategoria =
-                                users[userId]?['categoria'] ?? 'estudante';
+                                users[stats['uid']]?['categoria'] ??
+                                'estudante';
                             return userCategoria == categoriaParaExibir;
                           }).toList();
 
-                          // Se a lista estiver vazia
                           if (filteredList.isEmpty) {
-                            // Deixa o texto bonito (Efetivos ou Estudantes) dependendo do que está na tela
-                            final nomeAbaFormatado =
-                                categoriaParaExibir == 'efetivo'
-                                ? 'Efetivos'
-                                : 'Estudantes';
-
-                            return Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Column(
-                                children: [
-                                  Icon(
-                                    LucideIcons.medal,
-                                    size: 40,
-                                    color: Colors.grey[300],
+                            return Center(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 20,
+                                ),
+                                child: Text(
+                                  'Ainda não há relatórios hoje.',
+                                  style: GoogleFonts.inter(
+                                    color: Colors.grey[600],
+                                    fontStyle: FontStyle.italic,
                                   ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'Nenhum relatório de $nomeAbaFormatado hoje.',
-                                    style: GoogleFonts.inter(
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
-                                  Text(
-                                    'Seja o primeiro a pontuar!',
-                                    style: GoogleFonts.inter(
-                                      fontWeight: FontWeight.bold,
-                                      color: const Color(0xFF1E3A8A),
-                                    ),
-                                  ),
-                                ],
+                                ),
                               ),
                             );
                           }
 
-                         // Acha os campeões com proteção total contra valores Null
-                          Map<String, dynamic>? topHoras, topOfertas, topLivros;
-                          
+                          Map<String, dynamic>? topHoras,
+                              topOfertas,
+                              topVendas,
+                              topFaturamento;
                           for (var stats in filteredList) {
-                            final double horas = (stats['horas'] ?? 0.0).toDouble();
-                            final int ofertas = (stats['ofertas'] ?? 0).toInt();
-                            final int vendas = (stats['vendas'] ?? 0).toInt();
-
-                            if (topHoras == null || horas > (topHoras['horas'] ?? 0.0).toDouble()) topHoras = stats;
-                            if (topOfertas == null || ofertas > (topOfertas['ofertas'] ?? 0).toInt()) topOfertas = stats;
-                            if (topLivros == null || vendas > (topLivros['vendas'] ?? 0).toInt()) topLivros = stats;
+                            if (topHoras == null ||
+                                (stats['horas'] ?? 0.0).toDouble() >
+                                    (topHoras['horas'] ?? 0.0).toDouble())
+                              topHoras = stats;
+                            if (topOfertas == null ||
+                                (stats['ofertas'] ?? 0).toInt() >
+                                    (topOfertas['ofertas'] ?? 0).toInt())
+                              topOfertas = stats;
+                            if (topVendas == null ||
+                                (stats['vendas'] ?? 0).toInt() >
+                                    (topVendas['vendas'] ?? 0).toInt())
+                              topVendas = stats;
+                            if (topFaturamento == null ||
+                                (stats['valor'] ?? 0.0).toDouble() >
+                                    (topFaturamento['valor'] ?? 0.0).toDouble())
+                              topFaturamento = stats;
                           }
 
-                          return Column(
-                            children: [
-                              if (topHoras != null && (topHoras['horas'] ?? 0.0).toDouble() > 0)
-                                _buildChampionCard(
-                                  title: '⏰ Horas Missionárias', 
-                                  icon: '📚', 
-                                  name: users[topHoras['uid']]?['nome'] ?? 'Colportor', 
-                                  score: '${(topHoras['horas'] ?? 0.0).toDouble().toStringAsFixed(1)}h', 
-                                  isGold: true
-                                ),
-                              if (topOfertas != null && (topOfertas['ofertas'] ?? 0).toInt() > 0)
-                                _buildChampionCard(
-                                  title: '🙋 Abordagens', 
-                                  icon: '🙋', 
-                                  name: users[topOfertas['uid']]?['nome'] ?? 'Colportor', 
-                                  score: '${(topOfertas['ofertas'] ?? 0).toInt()}', 
-                                  isGold: false
-                                ),
-                              if (topLivros != null && (topLivros['vendas'] ?? 0).toInt() > 0)
-                                _buildChampionCard(
-                                  title: '💼 Vendas', 
-                                  icon: '💼', 
-                                  name: users[topLivros['uid']]?['nome'] ?? 'Colportor', 
-                                  score: '${(topLivros['vendas'] ?? 0).toInt()} un', 
-                                  isGold: false
-                                ),
-                            ],
-                          );
+                          List<Map<String, dynamic>> destaques = [];
+
+                          if (topHoras != null &&
+                              (topHoras['horas'] ?? 0.0).toDouble() > 0) {
+                            destaques.add({
+                              'titulo': 'LÍDER EM HORAS',
+                              'icone': LucideIcons.clock,
+                              'nome':
+                                  users[topHoras['uid']]?['nome'] ??
+                                  'Colportor',
+                              'fotoUrl': users[topHoras['uid']]?['fotoUrl'],
+                              'score':
+                                  '${(topHoras['horas'] ?? 0.0).toDouble().toStringAsFixed(1)}h',
+                            });
+                          }
+                          if (topOfertas != null &&
+                              (topOfertas['ofertas'] ?? 0).toInt() > 0) {
+                            destaques.add({
+                              'titulo': 'LÍDER EM ABORDAGENS',
+                              'icone': LucideIcons.users,
+                              'nome':
+                                  users[topOfertas['uid']]?['nome'] ??
+                                  'Colportor',
+                              'fotoUrl': users[topOfertas['uid']]?['fotoUrl'],
+                              'score':
+                                  '${(topOfertas['ofertas'] ?? 0).toInt()}',
+                            });
+                          }
+                          if (topVendas != null &&
+                              (topVendas['vendas'] ?? 0).toInt() > 0) {
+                            destaques.add({
+                              'titulo': 'LÍDER EM VENDAS',
+                              'icone': LucideIcons.bookOpen,
+                              'nome':
+                                  users[topVendas['uid']]?['nome'] ??
+                                  'Colportor',
+                              'fotoUrl': users[topVendas['uid']]?['fotoUrl'],
+                              'score':
+                                  '${(topVendas['vendas'] ?? 0).toInt()} un',
+                            });
+                          }
+                          if (topFaturamento != null &&
+                              (topFaturamento['valor'] ?? 0.0).toDouble() > 0) {
+                            destaques.add({
+                              'titulo': 'MAIOR FATURAMENTO',
+                              'icone': LucideIcons.coins,
+                              'nome':
+                                  users[topFaturamento['uid']]?['nome'] ??
+                                  'Colportor',
+                              'fotoUrl':
+                                  users[topFaturamento['uid']]?['fotoUrl'],
+                              'score':
+                                  'R\$ ${(topFaturamento['valor'] ?? 0.0).toDouble().toStringAsFixed(2).replaceAll('.', ',')}',
+                            });
+                          }
+
+                          if (destaques.isEmpty) return const SizedBox.shrink();
+
+                          return DestaqueCarousel(destaques: destaques);
                         },
                       );
                     },
@@ -857,9 +652,10 @@ class _HomePageState extends ConsumerState<HomePage> {
               );
             },
           ),
+
           const SizedBox(height: 24),
 
-          // 5. ESTATÍSTICAS TOTAIS
+          // ESTATÍSTICAS TOTAIS
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -917,7 +713,6 @@ class _HomePageState extends ConsumerState<HomePage> {
                           ],
                         ),
                         const SizedBox(height: 8),
-                        const SizedBox(height: 8),
                         Row(
                           children: [
                             Expanded(
@@ -925,13 +720,13 @@ class _HomePageState extends ConsumerState<HomePage> {
                                 'Abordagens',
                                 (stats['ofertas'] ?? 0).toString(),
                               ),
-                            ), // Antigo Ofertas R$
+                            ),
                             Expanded(
                               child: _buildStatBox(
                                 'Vendas (Qtd)',
                                 (stats['vendas'] ?? 0).toString(),
                               ),
-                            ), // Antigo Livros
+                            ),
                           ],
                         ),
                         const SizedBox(height: 8),
@@ -963,10 +758,8 @@ class _HomePageState extends ConsumerState<HomePage> {
       ),
     );
   }
-  // ==========================================
-  // WIDGETS AUXILIARES DA TELA
-  // ==========================================
 
+  // WIDGETS AUXILIARES
   Widget _buildActionCard({
     required String icon,
     required String title,
@@ -1003,11 +796,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   Widget _buildTabButton(String title, String value) {
     final isActive = _abaAtual == value;
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          _abaAtual = value; // Atualiza a tela instantaneamente
-        });
-      },
+      onTap: () => setState(() => _abaAtual = value),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
@@ -1030,91 +819,10 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  Widget _buildChampionCard({
-    required String title,
-    required String icon,
-    required String name,
-    required String score,
-    required bool isGold,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: isGold
-              ? [
-                  const Color(0xFFF59E0B),
-                  const Color(0xFFFBBF24),
-                ] // Gradiente Dourado
-              : [
-                  const Color(0xFF1E3A8A),
-                  const Color(0xFF3B82F6),
-                ], // Gradiente Azul
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Text(
-            title,
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            width: 70,
-            height: 70,
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 8)],
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              icon,
-              style: const TextStyle(fontSize: 32),
-            ), // Aqui futuramente entra a foto do perfil
-          ),
-          const SizedBox(height: 12),
-          Text(
-            name,
-            style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            score,
-            style: GoogleFonts.inter(
-              fontSize: 26,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildStatBox(String title, String value) {
     return Container(
       padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.symmetric(horizontal: 4),
       decoration: BoxDecoration(
         color: const Color(0xFFF8F9FA),
         borderRadius: BorderRadius.circular(12),
@@ -1143,9 +851,6 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  // ==========================================
-  // DRAWER DE CARREGAMENTO (Evita que a tela quebre)
-  // ==========================================
   Widget _buildLoadingDrawer() {
     return const Drawer(
       backgroundColor: Colors.white,
@@ -1153,15 +858,11 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  // ==========================================
-  // DRAWER (MENU LATERAL)
-  // ==========================================
   Widget _buildDrawer(BuildContext context, Map<String, dynamic> profile) {
     final nome = profile['nome'] ?? 'Usuário';
     final email = profile['email'] ?? '';
     final role = profile['role'] == 'admin' ? 'Administrador' : 'Colportor';
-    final fotoUrl = profile['fotoUrl']; // Pega a foto do banco
-
+    final fotoUrl = profile['fotoUrl'];
     final inicial = nome.toString().isNotEmpty
         ? nome.toString()[0].toUpperCase()
         : 'U';
@@ -1188,7 +889,6 @@ class _HomePageState extends ConsumerState<HomePage> {
             accountEmail: Text(email, style: GoogleFonts.inter(fontSize: 13)),
             currentAccountPicture: CircleAvatar(
               backgroundColor: Colors.white,
-              // Se tiver foto, mostra a imagem da web. Se não, mostra a letra.
               backgroundImage: fotoUrl != null ? NetworkImage(fotoUrl) : null,
               child: fotoUrl == null
                   ? Text(
@@ -1202,8 +902,6 @@ class _HomePageState extends ConsumerState<HomePage> {
                   : null,
             ),
           ),
-
-          // OPÇÕES DO MENU
           ListTile(
             leading: const Icon(
               LucideIcons.userCircle,
@@ -1218,8 +916,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               style: GoogleFonts.inter(fontSize: 12),
             ),
             onTap: () {
-              Navigator.pop(context); // Fecha o menu primeiro
-              // Abre a tela de configurações passando o perfil
+              Navigator.pop(context);
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -1228,9 +925,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               );
             },
           ),
-
           const Divider(),
-
           ListTile(
             leading: const Icon(LucideIcons.logOut, color: Colors.redAccent),
             title: Text(
@@ -1240,14 +935,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                 color: Colors.redAccent,
               ),
             ),
-            onTap: () {
-              ref.read(authControllerProvider.notifier).signOut();
-            },
+            onTap: () => ref.read(authControllerProvider.notifier).signOut(),
           ),
-
           const Spacer(),
-
-          // RODAPÉ DO MENU
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Text(
@@ -1262,32 +952,25 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   // ==========================================
-  // ABA DE RELATÓRIOS DO USUÁRIO (Blindada com Riverpod)
+  // ABA RELATÓRIOS E ANIVERSÁRIOS
   // ==========================================
   Widget _buildRelatoriosTab(String? uid) {
     if (uid == null)
       return const Center(child: Text('Usuário não identificado.'));
-
-    // 1. O Riverpod assume o controle! Ele não deixa a lista sumir nos recarregamentos da tela.
     final reportsAsync = ref.watch(userReportsProvider(uid));
 
     return reportsAsync.when(
-      // SE ESTIVER CARREGANDO:
       loading: () => const Center(child: CircularProgressIndicator()),
-
-      // SE DER ERRO (Isso vai mostrar na tela se faltar criar o Index no Firebase!):
       error: (err, stack) => Center(
         child: Padding(
           padding: const EdgeInsets.all(20.0),
           child: Text(
-            'Erro ao carregar relatórios:\n$err',
+            'Erro:\n$err',
             style: GoogleFonts.inter(color: Colors.redAccent),
             textAlign: TextAlign.center,
           ),
         ),
       ),
-
-      // SE DER SUCESSO:
       data: (snapshot) {
         if (snapshot.docs.isEmpty) {
           return Center(
@@ -1303,27 +986,17 @@ class _HomePageState extends ConsumerState<HomePage> {
                     color: Colors.grey[600],
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Vá no Início e clique em "Novo Relatório".',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    color: Colors.grey[500],
-                  ),
-                ),
               ],
             ),
           );
         }
 
         final reports = snapshot.docs;
-
         return ListView.builder(
           padding: const EdgeInsets.all(16),
           itemCount: reports.length,
           itemBuilder: (context, index) {
             final report = reports[index].data() as Map<String, dynamic>;
-
             final timestamp = report['data_envio'] as Timestamp?;
             final date = timestamp != null
                 ? timestamp.toDate()
@@ -1421,7 +1094,6 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  // Widget auxiliar para desenhar os ícones com os números lado a lado
   Widget _buildMiniStat(String icon, String value) {
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -1440,21 +1112,13 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  // ==========================================
-  // ABA DE ANIVERSÁRIOS DO MÊS
-  // ==========================================
   Widget _buildAniversariosTab(Map<String, dynamic>? profile) {
     final uid = profile?['id'];
     if (uid == null)
       return const Center(child: Text('Usuário não identificado.'));
-
-    // Verifica se o usuário atual já preencheu o próprio aniversário
     final bool precisaPreencherData = profile?['mes_nascimento'] == null;
-
     final usersMapAsync = ref.watch(allUsersProvider);
     final mesAtual = DateTime.now().month;
-
-    // Nomes dos meses para exibir bonitinho
     const nomesMeses = [
       '',
       'Janeiro',
@@ -1490,13 +1154,12 @@ class _HomePageState extends ConsumerState<HomePage> {
           ),
           const SizedBox(height: 24),
 
-          // 1. BANNER PARA PREENCHER A PRÓPRIA DATA (Some automaticamente após preencher)
           if (precisaPreencherData)
             Container(
               margin: const EdgeInsets.only(bottom: 24),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
+                color: const Color(0xFFF59E0B).withOpacity(0.1),
                 border: Border.all(color: const Color(0xFFF59E0B), width: 1.5),
                 borderRadius: BorderRadius.circular(16),
               ),
@@ -1550,7 +1213,6 @@ class _HomePageState extends ConsumerState<HomePage> {
               ),
             ),
 
-          // 2. LISTA DE ANIVERSARIANTES DO MÊS
           usersMapAsync.when(
             loading: () => const Center(
               child: Padding(
@@ -1563,12 +1225,9 @@ class _HomePageState extends ConsumerState<HomePage> {
               style: GoogleFonts.inter(color: Colors.red),
             ),
             data: (usersMap) {
-              // Filtra apenas quem faz aniversário neste mês
               final aniversariantes = usersMap.values
                   .where((u) => u['mes_nascimento'] == mesAtual)
                   .toList();
-
-              // Ordena pelo dia do aniversário (do dia 1 ao 31)
               aniversariantes.sort(
                 (a, b) => (a['dia_nascimento'] as int).compareTo(
                   b['dia_nascimento'] as int,
@@ -1601,8 +1260,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               }
 
               return ListView.builder(
-                shrinkWrap:
-                    true, // Necessário por estar dentro de um SingleChildScrollView
+                shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: aniversariantes.length,
                 itemBuilder: (context, index) {
@@ -1610,10 +1268,6 @@ class _HomePageState extends ConsumerState<HomePage> {
                   final dia = user['dia_nascimento'];
                   final nome = user['nome'] ?? 'Sem nome';
                   final fotoUrl = user['fotoUrl'];
-                  final telefone =
-                      user['telefone']; // Caso queira usar para um botão de WhatsApp no futuro
-
-                  // Verifica se o aniversário é EXATAMENTE HOJE
                   final isHoje = dia == DateTime.now().day;
 
                   return Card(
@@ -1684,9 +1338,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                         icon: const Icon(
                           LucideIcons.messageCircle,
                           color: Color(0xFF25D366),
-                        ), // Cor do WhatsApp
+                        ),
                         onPressed: () {
-                          // Lógica futura: Abrir url_launcher com "https://wa.me/55${telefone limpo}"
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text(
@@ -1708,16 +1361,10 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   // ==========================================
-  // ABA DE MOTIVAÇÃO E TREINAMENTO
-  // ==========================================
-  // ==========================================
-  // ABA DE MOTIVAÇÃO E TREINAMENTO (Guia de Bolso)
+  // ABA MOTIVAÇÃO
   // ==========================================
   Widget _buildMotivacaoTab() {
-    // Agora puxamos direto da nossa classe EgwDatabase!
-    // Como a tela reconstrói ao chamar setState, podemos usar uma variável local
     final fraseFlash = EgwDatabase.getRandomQuote();
-
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20.0),
       child: Column(
@@ -1737,7 +1384,6 @@ class _HomePageState extends ConsumerState<HomePage> {
           ),
           const SizedBox(height: 24),
 
-          // 1. CARD PRINCIPAL (Sorteio Geral)
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(24),
@@ -1750,7 +1396,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF8B5CF6).withValues(alpha: 0.3),
+                  color: const Color(0xFF8B5CF6).withOpacity(0.3),
                   blurRadius: 15,
                   offset: const Offset(0, 8),
                 ),
@@ -1772,9 +1418,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ),
                 const SizedBox(height: 24),
                 TextButton.icon(
-                  onPressed: () => setState(
-                    () {},
-                  ), // Apenas recarrega a tela para sortear nova frase
+                  onPressed: () => setState(() {}),
                   icon: const Icon(
                     LucideIcons.refreshCw,
                     color: Colors.white,
@@ -1794,7 +1438,6 @@ class _HomePageState extends ConsumerState<HomePage> {
           ),
           const SizedBox(height: 32),
 
-          // 2. TEMAS DO LIVRO (Botões de Emergência)
           Text(
             '🎯 O que você precisa agora?',
             style: GoogleFonts.inter(
@@ -1805,12 +1448,9 @@ class _HomePageState extends ConsumerState<HomePage> {
           ),
           const SizedBox(height: 16),
 
-          // Mapeia todas as categorias que existem lá no egw_database.dart
           ...EgwDatabase.categorias.keys.map((categoria) {
-            // Define ícones e cores diferentes baseados no nome da categoria
             IconData icone = LucideIcons.bookOpen;
             Color cor = const Color(0xFF3B82F6);
-
             if (categoria.contains('Consagração')) {
               icone = LucideIcons.heartHandshake;
               cor = const Color(0xFF10B981);
@@ -1821,7 +1461,6 @@ class _HomePageState extends ConsumerState<HomePage> {
               icone = LucideIcons.shieldAlert;
               cor = const Color(0xFFEF4444);
             }
-
             return _buildTemaCard(categoria, icone, cor);
           }),
         ],
@@ -1829,7 +1468,6 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  // Widget dos botões de categoria que abrem o pop-up (BottomSheet)
   Widget _buildTemaCard(String categoria, IconData icon, Color color) {
     return Card(
       color: Colors.white,
@@ -1841,7 +1479,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         leading: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
+            color: color.withOpacity(0.1),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(icon, color: color),
@@ -1851,135 +1489,251 @@ class _HomePageState extends ConsumerState<HomePage> {
           style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         trailing: const Icon(LucideIcons.chevronRight, color: Colors.grey),
-        onTap: () => _abrirConselhoPorTema(categoria, color),
+        onTap: () => showModalBottomSheet(
+          context: context,
+          backgroundColor: Colors.transparent,
+          builder: (context) {
+            return StatefulBuilder(
+              builder: (context, setModalState) {
+                final frase = EgwDatabase.getRandomQuoteFromCategory(categoria);
+                return Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(24),
+                      topRight: Radius.circular(24),
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        categoria,
+                        style: GoogleFonts.inter(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: color,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        '"$frase"',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontStyle: FontStyle.italic,
+                          color: Colors.black87,
+                          height: 1.6,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 32),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton.icon(
+                          onPressed: () => setModalState(() {}),
+                          icon: const Icon(
+                            LucideIcons.refreshCw,
+                            color: Colors.white,
+                          ),
+                          label: Text(
+                            'Ler mais sobre isso',
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: color,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }
+}
 
-  // O Pop-up que sobe da tela com o conselho daquele tema específico
-  void _abrirConselhoPorTema(String categoria, Color cor) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            final frase = EgwDatabase.getRandomQuoteFromCategory(categoria);
+// ==========================================
+// WIDGET DO CARROSSEL DE DESTAQUES (NOVO)
+// ==========================================
+class DestaqueCarousel extends StatefulWidget {
+  final List<Map<String, dynamic>> destaques;
 
-            return Container(
-              padding: const EdgeInsets.all(24),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(24),
-                  topRight: Radius.circular(24),
-                ),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    categoria,
-                    style: GoogleFonts.inter(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: cor,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    '"$frase"',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontStyle: FontStyle.italic,
-                      color: Colors.black87,
-                      height: 1.6,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 32),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        // Ao clicar, o StatefulBuilder do modal recarrega apenas o modal sorteando nova frase
-                        setModalState(() {});
-                      },
-                      icon: const Icon(
-                        LucideIcons.refreshCw,
-                        color: Colors.white,
-                      ),
-                      label: Text(
-                        'Ler mais sobre isso',
-                        style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: cor,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
+  const DestaqueCarousel({super.key, required this.destaques});
+
+  @override
+  State<DestaqueCarousel> createState() => _DestaqueCarouselState();
+}
+
+class _DestaqueCarouselState extends State<DestaqueCarousel> {
+  late PageController _pageController;
+  Timer? _timer;
+  int _currentPage = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: 0);
+
+    // Configura o carrossel para rodar a cada 4 segundos
+    if (widget.destaques.length > 1) {
+      _timer = Timer.periodic(const Duration(seconds: 4), (Timer timer) {
+        if (!mounted) return;
+
+        _currentPage++;
+        if (_currentPage >= widget.destaques.length) {
+          _currentPage = 0;
+          _pageController.jumpToPage(0);
+        } else {
+          _pageController.animateToPage(
+            _currentPage,
+            duration: const Duration(milliseconds: 800),
+            curve: Curves.fastOutSlowIn,
+          );
+        }
+      });
+    }
   }
 
-  // Widget auxiliar para os cards de treinamento
-  Widget _buildTrainingCard({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required Color color,
-  }) {
-    return Card(
-      color: Colors.white,
-      elevation: 1,
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 12,
-        ),
-        leading: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: color),
-        ),
-        title: Text(
-          title,
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16),
-        ),
-        subtitle: Text(
-          subtitle,
-          style: GoogleFonts.inter(color: Colors.grey[600], fontSize: 13),
-        ),
-        trailing: const Icon(LucideIcons.chevronRight, color: Colors.grey),
-        onTap: () {
-          // Lógica futura: Abrir um vídeo do YouTube ou um PDF
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Material sendo preparado pela Liderança!'),
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 280,
+      child: PageView.builder(
+        controller: _pageController,
+        physics: const BouncingScrollPhysics(),
+        itemCount: widget.destaques.length,
+        onPageChanged: (int page) {
+          _currentPage = page;
+        },
+        itemBuilder: (context, index) {
+          final item = widget.destaques[index];
+          final fotoUrl = item['fotoUrl'];
+
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12, left: 4, right: 4),
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFE65100), Color(0xFFF57C00)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFF57C00).withOpacity(0.5),
+                  blurRadius: 25,
+                  spreadRadius: 2,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(item['icone'], color: Colors.white70, size: 16),
+                    const SizedBox(width: 6),
+                    Text(
+                      item['titulo'],
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white70,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 3),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.white.withOpacity(0.4),
+                        blurRadius: 15,
+                        spreadRadius: 1,
+                      ),
+                    ],
+                  ),
+                  child: CircleAvatar(
+                    radius: 38,
+                    backgroundColor: Colors.white,
+                    backgroundImage:
+                        (fotoUrl != null && fotoUrl.toString().isNotEmpty)
+                        ? NetworkImage(fotoUrl)
+                        : null,
+                    child: (fotoUrl == null || fotoUrl.toString().isEmpty)
+                        ? const Icon(
+                            LucideIcons.bookOpen,
+                            size: 40,
+                            color: Color(0xFFE65100),
+                          )
+                        : null,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  item['nome'],
+                  style: GoogleFonts.inter(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  item['score'],
+                  style: GoogleFonts.inter(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           );
         },

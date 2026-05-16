@@ -6,46 +6,8 @@ import 'dart:math';
 import '../../constants/bible_database.dart';
 import '../../constants/egw_database.dart';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-
-// 1. Controlador para SALVAR um novo relatório
-class ReportController extends StateNotifier<AsyncValue<void>> {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
-  ReportController() : super(const AsyncData(null));
-
-  Future<void> submitReport({
-    required String uid,
-    required double horas,
-    required int oracoes,
-    required double ofertas,
-    required int livros,
-    required String observacoes,
-  }) async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
-      await _firestore.collection('reports').add({
-        'uid': uid,
-        'horas': horas,
-        'oracoes': oracoes,
-        'ofertas': ofertas,
-        'livros': livros,
-        'observacoes': observacoes,
-        'data_envio': FieldValue.serverTimestamp(),
-      });
-    });
-  }
-}
-
-// 2. Provedor de estado do Controlador de Salvar
-final reportControllerProvider =
-    StateNotifierProvider<ReportController, AsyncValue<void>>((ref) {
-      return ReportController();
-    });
-
 // =========================================================================
-// 3. AQUI ESTÁ ELE: Provedor que ESCUTA a lista de relatórios do usuário
+// 1. Provedor que ESCUTA a lista de relatórios do usuário
 // =========================================================================
 final userReportsProvider = StreamProvider.family<QuerySnapshot, String>((
   ref,
@@ -59,57 +21,55 @@ final userReportsProvider = StreamProvider.family<QuerySnapshot, String>((
 });
 
 // =========================================================================
-// 4. Provedor que SOMA todas as estatísticas do usuário
+// 2. Provedor de Estatísticas Totais do Usuário (ACUMULATIVO DO MÊS)
 // =========================================================================
-// Provedor das Metas e Vídeo (Admin)
-final campaignSettingsProvider = StreamProvider<Map<String, dynamic>>((ref) {
+final userTotalStatsProvider = StreamProvider.family<Map<String, dynamic>, String>((
+  ref,
+  uid,
+) {
+  final now = DateTime.now();
+  // Garante que só soma os relatórios do mês atual! (Zera automaticamente na virada do mês)
+  final primeiroDiaDoMes = DateTime(now.year, now.month, 1);
+
   return FirebaseFirestore.instance
-      .collection('settings')
-      .doc('campaign')
+      .collection('reports')
+      .where('uid', isEqualTo: uid)
+      .where('data_envio', isGreaterThanOrEqualTo: primeiroDiaDoMes)
       .snapshots()
-      .map((doc) => doc.data() ?? {});
+      .map((snap) {
+        double horas = 0, valor = 0;
+        int vendas = 0, ofertas = 0, interessados = 0, batismos = 0, gratis = 0;
+
+        for (var doc in snap.docs) {
+          final d = doc.data();
+          horas += (d['horas_missionarias'] ?? 0).toDouble();
+          valor += (d['valor_vendas'] ?? 0).toDouble();
+          vendas += ((d['vendas_qtd'] ?? 0) as num).toInt();
+
+          // Suporta o nome novo (ofertas_dadas) e o antigo para não perder histórico
+          ofertas +=
+              ((d['ofertas_dadas'] ?? d['ofertas_abordagens'] ?? 0) as num)
+                  .toInt();
+
+          interessados += ((d['interessados'] ?? 0) as num).toInt();
+          batismos += ((d['batismos'] ?? 0) as num).toInt();
+          gratis += ((d['literatura_gratis'] ?? 0) as num).toInt();
+        }
+
+        return {
+          'horas': horas,
+          'valor': valor,
+          'vendas': vendas,
+          'ofertas': ofertas, // Agora acumula perfeitamente!
+          'interessados': interessados,
+          'batismos': batismos,
+          'gratis': gratis,
+        };
+      });
 });
 
-// Provedor de Estatísticas Individuais (Ajustado para a nova especificação)
-// Provedor para as estatísticas que alimentam os Desafios// 4. Provedor de Estatísticas Totais do Usuário
-final userTotalStatsProvider =
-    StreamProvider.family<Map<String, dynamic>, String>((ref, uid) {
-      return FirebaseFirestore.instance
-          .collection('reports')
-          .where('uid', isEqualTo: uid)
-          .snapshots()
-          .map((snap) {
-            double horas = 0, valor = 0;
-            int vendas = 0,
-                ofertas = 0,
-                interessados = 0,
-                batismos = 0; // <-- Adicionados aqui!
-
-            for (var doc in snap.docs) {
-              final d = doc.data();
-              horas += (d['horas_missionarias'] ?? 0).toDouble();
-              valor += (d['valor_vendas'] ?? 0).toDouble();
-              vendas += ((d['vendas_qtd'] ?? 0) as num).toInt();
-              ofertas += ((d['ofertas_abordagens'] ?? 0) as num).toInt();
-
-              // <-- Somando os novos campos do relatório!
-              interessados += ((d['interessados'] ?? 0) as num).toInt();
-              batismos += ((d['batismos'] ?? 0) as num).toInt();
-            }
-
-            return {
-              'horas': horas,
-              'valor': valor,
-              'vendas': vendas,
-              'ofertas': ofertas,
-              'interessados': interessados, // <-- Passando para a tela
-              'batismos': batismos, // <-- Passando para a tela
-            };
-          });
-    });
-
 // =========================================================================
-// 5. Provedor para buscar todos os usuários (Dicionário de Nomes)
+// 3. Provedor para buscar todos os usuários (Dicionário de Nomes)
 // =========================================================================
 final allUsersProvider = StreamProvider<Map<String, dynamic>>((ref) {
   return FirebaseFirestore.instance.collection('users').snapshots().map((snap) {
@@ -120,15 +80,16 @@ final allUsersProvider = StreamProvider<Map<String, dynamic>>((ref) {
     return map;
   });
 });
+
 // =========================================================================
-// 6. Provedor dos Campeões do Dia (Retorna a lista bruta somada de hoje)
+// 4. Provedor dos Campeões do Dia (Acumulativo de HOJE)
 // =========================================================================
-// 5. Campeões de Hoje
 final todaysChampionsProvider = StreamProvider<List<Map<String, dynamic>>>((
   ref,
 ) {
   final now = DateTime.now();
   final inicioHoje = DateTime(now.year, now.month, now.day);
+
   return FirebaseFirestore.instance
       .collection('reports')
       .where('data_envio', isGreaterThanOrEqualTo: inicioHoje)
@@ -138,24 +99,33 @@ final todaysChampionsProvider = StreamProvider<List<Map<String, dynamic>>>((
         for (var doc in snap.docs) {
           final d = doc.data();
           final uid = d['uid'];
-          if (uid == null) continue; // Ignora se vier sem ID
+          if (uid == null) continue;
 
           if (!stats.containsKey(uid)) {
-            stats[uid] = {'uid': uid, 'horas': 0.0, 'vendas': 0, 'ofertas': 0};
+            stats[uid] = {
+              'uid': uid,
+              'horas': 0.0,
+              'vendas': 0,
+              'ofertas': 0,
+              'valor': 0.0,
+            };
           }
 
-          // Usa os nomes da nova especificação
           stats[uid]!['horas'] += (d['horas_missionarias'] ?? 0).toDouble();
-          stats[uid]!['vendas'] += (d['vendas_qtd'] ?? 0).toInt();
-          stats[uid]!['ofertas'] += (d['ofertas_abordagens'] ?? 0).toInt();
+          stats[uid]!['vendas'] += ((d['vendas_qtd'] ?? 0) as num).toInt();
+          stats[uid]!['ofertas'] +=
+              ((d['ofertas_dadas'] ?? d['ofertas_abordagens'] ?? 0) as num)
+                  .toInt();
+          stats[uid]!['valor'] += (d['valor_vendas'] ?? 0)
+              .toDouble(); // Necessário para o carrossel Neon
         }
         return stats.values.toList();
       });
 });
+
 // =========================================================================
-// 7. Provedor de Ranking Mensal (Tabela de Classificação Completa)
+// 5. Provedor de Ranking Mensal (Tabela de Classificação)
 // =========================================================================
-// 6. Ranking Mensal
 final monthlyRankingProvider = StreamProvider<List<Map<String, dynamic>>>((
   ref,
 ) {
@@ -178,28 +148,28 @@ final monthlyRankingProvider = StreamProvider<List<Map<String, dynamic>>>((
               'uid': uid,
               'horas': 0.0,
               'vendas_qtd': 0,
-              'ofertas_abordagens': 0,
+              'ofertas_dadas': 0, // Atualizado para a nova regra
             };
           }
 
-          // Acumula os valores
           stats[uid]!['horas'] += (d['horas_missionarias'] ?? 0).toDouble();
-          stats[uid]!['vendas_qtd'] += (d['vendas_qtd'] ?? 0).toInt();
-          stats[uid]!['ofertas_abordagens'] += (d['ofertas_abordagens'] ?? 0)
-              .toInt();
+          stats[uid]!['vendas_qtd'] += ((d['vendas_qtd'] ?? 0) as num).toInt();
+          stats[uid]!['ofertas_dadas'] +=
+              ((d['ofertas_dadas'] ?? d['ofertas_abordagens'] ?? 0) as num)
+                  .toInt();
         }
         return stats.values.toList();
       });
 });
 
-// Provedor que escolhe aleatoriamente entre Bíblia e O Colportor Evangelista
+// =========================================================================
+// 6. Provedor de Motivação (Bíblia ou EGW)
+// =========================================================================
 final dailyInspirationProvider = StateProvider<Map<String, String>>((ref) {
-  final isBible = Random().nextBool(); // Cara ou Coroa!
-
+  final isBible = Random().nextBool();
   if (isBible) {
     return BibleDatabase.getRandomVerse();
   } else {
-    // Se caiu Coroa, usamos E.G.W
     return {
       'text': EgwDatabase.getRandomQuote(),
       'reference': 'O Colportor Evangelista',
@@ -208,24 +178,24 @@ final dailyInspirationProvider = StateProvider<Map<String, String>>((ref) {
 });
 
 // =========================================================================
-// 9. Provedor das Metas da Campanha (Painel Admin)
+// 7. Provedor das Metas da Campanha (Globais - Configuradas no Admin)
 // =========================================================================
-final campaignGoalsProvider = StreamProvider<Map<String, dynamic>>((ref) {
-  // Lê as metas de um documento fixo chamado 'campaign' na coleção 'settings'
+final campaignSettingsProvider = StreamProvider<Map<String, dynamic>>((ref) {
   return FirebaseFirestore.instance
       .collection('settings')
       .doc('campaign')
       .snapshots()
-      .map((doc) {
-        if (doc.exists && doc.data() != null) {
-          return doc.data()!;
-        }
-        // Se o Admin ainda não tiver configurado nada, retorna um valor padrão de segurança
-        return {
-          'horas': 100.0,
-          'livros': 50.0,
-          'ofertas': 2000.0,
-          'oracoes': 200.0,
-        };
-      });
+      .map((doc) => doc.data() ?? {});
 });
+
+// =========================================================================
+// 8. Provedor das Metas Pessoais do Utilizador
+// =========================================================================
+final userPersonalGoalsProvider =
+    StreamProvider.family<Map<String, dynamic>, String>((ref, uid) {
+      return FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .snapshots()
+          .map((doc) => doc.data() ?? {});
+    });

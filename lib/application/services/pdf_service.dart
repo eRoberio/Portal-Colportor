@@ -18,8 +18,9 @@ class PdfService {
       symbol: 'R\$',
     );
     final dataGeral = DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now());
-    final titulo =
-        tituloCustomizado ?? 'RELATÓRIO ADMINISTRATIVO DE COLPORTAGEM';
+    final titulo = tituloCustomizado.isNotEmpty
+        ? tituloCustomizado
+        : 'RELATÓRIO ADMINISTRATIVO DE COLPORTAGEM';
 
     // 1. Processar e Somar os Dados
     double totalHoras = 0, totalValor = 0;
@@ -44,8 +45,12 @@ class PdfService {
       }
 
       double h = (r['horas_missionarias'] ?? 0).toDouble();
-      int v = (r['vendas_qtd'] ?? 0).toInt();
-      int o = (r['ofertas_abordagens'] ?? 0).toInt();
+      int v = ((r['vendas_qtd'] ?? 0) as num).toInt();
+
+      // Lê o formato novo ou o formato antigo para não perder dados!
+      int o = ((r['ofertas_dadas'] ?? r['ofertas_abordagens'] ?? 0) as num)
+          .toInt();
+
       double val = (r['valor_vendas'] ?? 0).toDouble();
 
       statsPorUsuario[uid]!['horas'] += h;
@@ -83,7 +88,7 @@ class PdfService {
                       color: PdfColors.blue900,
                     ),
                   ),
-                  if (periodo != null)
+                  if (periodo.isNotEmpty)
                     pw.Text(
                       'Período: $periodo',
                       style: const pw.TextStyle(
@@ -113,10 +118,10 @@ class PdfService {
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
                 _buildStatBox(
-                  'Horas Miss.',
+                  'Horas Trab.',
                   '${totalHoras.toStringAsFixed(1)}h',
                 ),
-                _buildStatBox('Abordagens', '$totalOfertas'),
+                _buildStatBox('Ofertas Dadas', '$totalOfertas'),
                 _buildStatBox('Vendas', '$totalVendas un'),
                 _buildStatBox(
                   'Valor Total',
@@ -179,7 +184,7 @@ class PdfService {
                 [
                   'Nome do Colportor',
                   'Horas',
-                  'Abordagens',
+                  'Ofertas Dadas',
                   'Vendas (Qtd)',
                   'Total (R\$)',
                 ],
@@ -213,10 +218,9 @@ class PdfService {
       ),
     );
 
-    // No final da função, onde o arquivo é gerado:
+    // Salvar o arquivo
     await Printing.layoutPdf(
       onLayout: (PdfPageFormat format) async => pdf.save(),
-      // Definimos o nome que aparecerá ao baixar/partilhar
       name: '$nomeArquivo.pdf',
     );
   }
