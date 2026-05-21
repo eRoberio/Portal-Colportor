@@ -1,3 +1,4 @@
+import '../../application/constants/error_messages_pt_br.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -158,7 +159,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                             color: Colors.white,
                           ),
                           error: (e, _) => Text(
-                            'Erro ao carregar',
+                            ErrorMessagesPtBr.errorLoading,
                             style: GoogleFonts.inter(color: Colors.white),
                           ),
                         ),
@@ -181,7 +182,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         data: _buildBodyContent,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, __) =>
-            const Center(child: Text('Erro ao carregar tela principal')),
+          const Center(child: Text(ErrorMessagesPtBr.errorLoadingMainScreen)),
       ),
 
       bottomNavigationBar: BottomNavigationBar(
@@ -690,7 +691,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                     ),
                   ),
                   error: (err, stack) => Text(
-                    'Erro ao carregar estatísticas.',
+                    ErrorMessagesPtBr.errorLoadingStats,
                     style: GoogleFonts.inter(color: Colors.red),
                   ),
                   data: (stats) {
@@ -1221,7 +1222,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               ),
             ),
             error: (err, stack) => Text(
-              'Erro ao carregar dados.',
+              ErrorMessagesPtBr.errorLoading,
               style: GoogleFonts.inter(color: Colors.red),
             ),
             data: (usersMap) {
@@ -1247,7 +1248,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'Nenhum aniversário este mês.',
+                          ErrorMessagesPtBr.noBirthdays,
                           style: GoogleFonts.inter(
                             fontSize: 16,
                             color: Colors.grey[600],

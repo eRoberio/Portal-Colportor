@@ -1,3 +1,4 @@
+import '../../application/constants/error_messages_pt_br.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -89,7 +90,7 @@ class _NovoRelatorioPageState extends ConsumerState<NovoRelatorioPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('✅ Relatório enviado com sucesso!'),
+            content: Text(ErrorMessagesPtBr.reportSent),
             backgroundColor: Colors.green,
           ),
         );
@@ -98,7 +99,7 @@ class _NovoRelatorioPageState extends ConsumerState<NovoRelatorioPage> {
     } catch (e) {
       if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('❌ Erro: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('${ErrorMessagesPtBr.unknownError}\n$e'), backgroundColor: Colors.red),
         );
     }
     setState(() => _isLoading = false);
@@ -364,13 +365,13 @@ class _NovoRelatorioPageState extends ConsumerState<NovoRelatorioPage> {
 
               statsAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, _) => const Text('Erro ao carregar estatísticas.'),
+                error: (err, _) => const Text(ErrorMessagesPtBr.errorLoadingStats),
                 data: (stats) {
                   if (_tabMetasIndex == 0) {
                     return campaignAsync.when(
                       loading: () => const SizedBox.shrink(),
-                      error: (err, _) =>
-                          const Text('Erro ao carregar campanha.'),
+                        error: (err, _) =>
+                          const Text(ErrorMessagesPtBr.errorLoadingCampaign),
                       data: (config) => Column(
                         children: [
                           _buildProgressCard(
@@ -412,8 +413,8 @@ class _NovoRelatorioPageState extends ConsumerState<NovoRelatorioPage> {
                   } else {
                     return personalGoalsAsync.when(
                       loading: () => const SizedBox.shrink(),
-                      error: (err, _) =>
-                          const Text('Erro ao carregar metas pessoais.'),
+                        error: (err, _) =>
+                          const Text(ErrorMessagesPtBr.errorLoadingPersonalGoals),
                       data: (goals) {
                         final mH = (goals['meta_horas'] ?? 0.0).toDouble();
                         if (mH == 0)

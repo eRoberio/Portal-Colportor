@@ -1,3 +1,4 @@
+import 'application/constants/dev_banner.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'package:flutter/material.dart';
@@ -100,7 +101,7 @@ class ColportagemApp extends ConsumerWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1E3A8A)),
         useMaterial3: true,
       ),
-      home: homeWidget,
+      home: DevBanner(child: homeWidget),
     );
   }
 }

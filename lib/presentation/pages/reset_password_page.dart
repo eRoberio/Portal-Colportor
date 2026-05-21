@@ -1,8 +1,10 @@
 import 'package:colportportal/application/auth/auth_provider.dart';
 import 'package:colportportal/presentation/pages/login_page.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+import '../../application/constants/error_messages_pt_br.dart';
 
 // Variáveis globais para controle de link de redefinição
 String? linkMode;
@@ -71,17 +73,15 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                           foregroundColor: Colors.white,
                         ),
                         onPressed: () async {
-                          if (_passwordController.text.length < 6) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'A senha deve ter no mínimo 6 caracteres.',
-                                ),
-                                backgroundColor: Colors.redAccent,
-                              ),
-                            );
-                            return;
-                          }
+                              if (_passwordController.text.length < 6) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(ErrorMessagesPtBr.weakPassword),
+                                    backgroundColor: Colors.redAccent,
+                                  ),
+                                );
+                                return;
+                              }
 
                           // Envia a nova senha e o código da URL pro Firebase
                           await ref
@@ -95,17 +95,13 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                           if (!ref.read(authControllerProvider).hasError &&
                               context.mounted) {
                             // 1. MOSTRA A MENSAGEM VERDE
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  '✅ Senha alterada com sucesso! Faça login.',
-                                ),
-                                backgroundColor: Colors
-                                    .green, // <-- Cor verde adicionada aqui!
-                                behavior: SnackBarBehavior
-                                    .floating, // Fica flutuando, mais moderno
-                              ),
-                            );
+                               ScaffoldMessenger.of(context).showSnackBar(
+                                 const SnackBar(
+                                   content: Text(ErrorMessagesPtBr.passwordChanged),
+                                   backgroundColor: Colors.green,
+                                   behavior: SnackBarBehavior.floating,
+                                 ),
+                               );
 
                             // 2. LIMPA A MEMÓRIA PARA NÃO TRAVAR NA TELA DE RECUPERAÇÃO
                             linkMode = null;

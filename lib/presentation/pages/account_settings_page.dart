@@ -1,3 +1,4 @@
+import '../../application/constants/error_messages_pt_br.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -72,7 +73,7 @@ class _AccountSettingsPageState extends ConsumerState<AccountSettingsPage> {
       if (mounted && !ref.read(authControllerProvider).hasError) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('✅ Foto atualizada com sucesso!'),
+            content: Text(ErrorMessagesPtBr.photoUploadSuccess),
             backgroundColor: Colors.green,
           ),
         );

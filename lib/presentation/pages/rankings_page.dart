@@ -1,3 +1,4 @@
+import '../../application/constants/error_messages_pt_br.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -88,7 +89,7 @@ class _RankingsPageState extends ConsumerState<RankingsPage> {
               child: rankingAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (err, stack) =>
-                    Center(child: Text('Erro ao carregar dados: $err')),
+                  Center(child: Text(ErrorMessagesPtBr.errorLoading)),
                 data: (rankingList) {
                   return usersMapAsync.when(
                     loading: () =>
@@ -104,7 +105,7 @@ class _RankingsPageState extends ConsumerState<RankingsPage> {
                       if (listaFiltrada.isEmpty) {
                         return Center(
                           child: Text(
-                            'Sem relatórios para ${categoriaAtiva} este mês.',
+                            ErrorMessagesPtBr.noReports,
                             style: GoogleFonts.inter(
                               color: Colors.grey[600],
                               fontSize: 16,
